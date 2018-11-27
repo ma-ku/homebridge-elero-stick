@@ -184,8 +184,6 @@ class EleroStick
       		accessory.context.config = accessoryConfig;
     	}
 
-        this.log(" - needToRegisterPlatformAccessory: ", needToRegisterPlatformAccessory)
-
     	if (existingAccessory === undefined) {
             const eleroChannel = new EleroChannel(this.log, accessory, this, accessoryConfig.channel, false);
       		this.trackChannel(eleroChannel);
@@ -196,7 +194,6 @@ class EleroStick
     	}        
     } 
 
-/*
     // Handler will be invoked when user try to config your plugin.
     // Callback can be cached and invoke when necessary.
     configurationRequestHandler(context, request, callback) {
@@ -277,7 +274,7 @@ class EleroStick
         // Invoke callback to update setup UI
         callback(respDict);
     }    
-*/
+
     updateAccessoriesReachability() {
         this.log("Update Reachability");
         for (var index in this.accessories) {
@@ -319,8 +316,6 @@ class EleroChannel
 {
     constructor(log, accessory, stick, channel, register=true) {
 		
-		log.log("Channel for: ", accessory);
-        
         var info = accessory.getService(Service.AccessoryInformation);
 
         accessory.context.manufacturer = "Elero";
