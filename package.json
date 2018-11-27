@@ -10,7 +10,8 @@
     "homebridge-plugin",
     "home-automation",
     "elero",
-    "roltop"
+    "roltop",
+    "suntop"
   ],
   "directories": {
     "doc": "docs"
