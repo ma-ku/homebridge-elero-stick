@@ -13,7 +13,7 @@ const ELERO_COMMANDS = {
 };
 
 const ELERO_STATES = {
-    NO_INTORMATION:         0x00,
+    NO_INFORMATION:         0x00,
     TOP_POS_STOP:           0x01,
     BOTTOM_POS_STOP:        0x02,
     INTERM_POS_STOP:        0x03,
@@ -122,19 +122,35 @@ class EleroStickConnection extends EventEmitter {
         var csByte = 0x100 - (checksum & 0xff);
         msg[data.length] = csByte
 
-        this.log("Sending Raw Message: ", msg);
+        // this.log("Sending Raw Message: ", msg);
         
         this.serial.write(msg, function(err) {
           if (err) {
-            return this.log('Error on write: ', err.message);
+                this.connectionBusy = false
+                return this.log('Error on write: ', err.message);
           }
         });
+
+        var stick = this
+        setTimeout(function() {
+            stick.sendNext()
+        }, 4000)
+    }
+
+    sendNext() {
+        var command = this.commandQueue.shift()
+        if (command !== undefined) {
+            this.send(command)
+        }
+        else {
+            this.connectionBusy = false
+        }
     }
 
     incomingData(data) {
 
-        this.log("Received data ", data);
-
+        // this.log("Received data ", data);
+        
         if (this.checksum(data) == 0) {
             
             var valid = false;
@@ -146,10 +162,11 @@ class EleroStickConnection extends EventEmitter {
                 if ((data[1] == 0x05) && (data[2] == 0x4D)) {
                     // Easy_Ack
                     var channels = this.decodeChannels(data[3], data[4]);
-                    const info = getKeyByValue(ELERO_STATES, data[5]);
+                    const state = data[5];
 
+                    var conn = this
                     channels.forEach( function(channel) {
-                        statusReceived(info, channel);
+                        conn.statusReceived(channel, state);
                     });
                 }
                 else if ((data[1] == 0x04) && (data[2] == 0x4B)) {
@@ -160,15 +177,12 @@ class EleroStickConnection extends EventEmitter {
                 else break;
 
             } while (false);
-
-            return
         }
         else {
             this.log("Invalid checksum ", this.checksum(data));
         }
 
-        this.log("Could not decode response", data);
-        // this.error("Received invalid response: ", data)
+        this.sendNext()
     }
 
     /**
@@ -177,21 +191,37 @@ class EleroStickConnection extends EventEmitter {
      * @param {ELERO_COMMAND} command 
      */
     easySend(channels, command) {
+        channels = this.checkChannels(channels)
+        this.sendCommand([0xaa, 0x05, 0x4c, this.highChannelBits(channels), this.lowChannelBits(channels), command]);
+    }
 
-        if (channels === undefined) {
-            channels = Array.from({length: 15}, (v, k) => k); 
-        }
+    commandUp(channels) {
+        this.log("commandUp", channels)
+        this.easySend(channels, ELERO_COMMANDS.UP)
+    }
 
-        this.sendCommand([0xaa, 0x05, 0x4c, this.highChannelBits(channels), this.lowChannelBits(channels), ELERO_COMMAND[command]]);
+    commandDown(channels) {
+        this.log("commandDown", channels)
+        this.easySend(channels, ELERO_COMMANDS.DOWN)
+    }
+
+    commandStop(channels) {
+        this.log("commandStop", channels)
+        this.easySend(channels, ELERO_COMMANDS.STOP)
+    }
+
+    commandVentilationPosition(channels) {
+        this.log("commandVentilationPosition", channels)
+        this.easySend(channels, ELERO_COMMANDS.VENT_POS)
+    }
+
+    commandIntermediatePosition(channels) {
+        this.log("commandIntermediatePosition", channels)
+        this.easySend(channels, ELERO_COMMANDS.INTERM_POS)
     }
 
     easyInfo(channels) {
-        this.log("Easy Info");
-
-        if (channels === undefined) {
-            channels = Array.from({length: 15}, (v, k) => k); 
-        }
-
+        channels = this.checkChannels(channels)
         this.sendCommand([0xaa, 0x04, 0x4e, this.highChannelBits(channels), this.lowChannelBits(channels)]);
     }
       
@@ -200,6 +230,14 @@ class EleroStickConnection extends EventEmitter {
         this.sendCommand([0xaa, 0x02, 0x4a]);
     }
       
+    checkChannels(channels) {
+        if (channels === undefined) {
+            channels = Array.from({length: 15}, (v, k) => k); 
+        }
+        
+        return channels
+    }
+
     statusReceived(channel, state) {
         this.emit('status', channel, state);
     }
@@ -220,6 +258,8 @@ class EleroStickConnection extends EventEmitter {
                 bits |= 1 << (i - offset);
             }
         }
+
+        return bits
     }
 
     decodeChannels(highBits, lowBits) {
@@ -242,15 +282,12 @@ class EleroStickConnection extends EventEmitter {
     }
 
     getKeyByValue(obj, value) {
-        Object.keys(obj).find(key => obj[key] === value);  
+        return Object.keys(obj).find(key => obj[key] === value);  
     }  
 }
 
 module.exports = {
-
-    EleroStickConnection, 
+    EleroStickConnection: EleroStickConnection, 
     getInstance: EleroStickConnection.getInstance, 
-    
-    ELERO_COMMANDS: ELERO_COMMANDS, 
     ELERO_STATES: ELERO_STATES
 }

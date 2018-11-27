@@ -1,0 +1,48 @@
+{
+  "name": "homebridge-elero-stick",
+  "version": "0.1.0",
+  "description": "Elero funkstick for homebridge: https://github.com/ma-ku/homebridge-elero-stick",
+  "main": "index.js",
+  "license": "MIT",
+  "homepage": "https://github.com/ma-ku/homebridge-elero-stick#readme",
+  "keywords": [
+    "homebridge",
+    "homebridge-plugin",
+    "home-automation",
+    "elero",
+    "roltop"
+  ],
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build": "babel src -d lib",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ma-ku/homebridge-elero-stick.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ma-ku/homebridge-elero-stick/issues"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-core": "^6.24.1",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-register": "^6.24.1",
+    "jest": "^23.0"
+  },
+  "engines": {
+    "homebridge": ">=0.4.44",
+    "node": ">=10.0.0"
+  },
+  "dependencies": {
+    "homebridge": "^0.4.45",
+    "request": "^2.79.0",
+    "serialport": "^7.0.2"
+  },
+  "jest": {
+    "testRegex": "tests\\/.+_spec\\.jsx?$"
+  }
+}

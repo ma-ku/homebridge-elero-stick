@@ -3,8 +3,8 @@
 const PluginName = "homebridge-elero-stick";
 const PlatformName = "EleroStick";
 
-const EleroStickConnection = require('./stick');
-const EASY_COMMAND = require('./stick').EASY_COMMAND;
+const EleroStickConnection = require('./stick').EleroStickConnection;
+const ELERO_STATES = require('./stick').ELERO_STATES;
 
 const EventEmitter = require('events').EventEmitter;
 
@@ -36,13 +36,14 @@ class EleroStick
         this.port = config['port'];
         this.config = config;
         
-        // This will store the actual platformAccessory instances, indexed by the channel id
+        // This will store the actual platformAccessory instances, indexed by their uuid
         this.accessories = {};
         
         // An this will store the EleroChannel instance wrapping above accessories,
-        // indexed by their UUID
+        // indexed by their channel number
 		this.channels = {};
-		
+        this.channelIds = [];
+        
         var stick = this;
 
         this.serialConnection = EleroStickConnection.getInstance(this.log, this.port);
@@ -58,12 +59,35 @@ class EleroStick
                                 stick.registerChannels(channels);
                             })
 
+                            stick.serialConnection.on('status', (channel, state) => {
+                                stick.processState(channel, state);
+                            })
+
+                            stick.checkChannelStates()
+
                         }.bind(this));
         }
     }
 
     channelUUID(channel) {
         return UUIDGen.generate(this.port + ":" + channel)
+    }
+
+    checkChannelStates() {
+
+        var stick = this
+
+        setTimeout(function() {
+            stick.serialConnection.easyInfo(stick.channelIds)
+
+            stick.checkChannelStates()
+        }, 5000)
+    }
+
+    processState(channel, state) {
+        if (this.channels[ channel ] !== undefined) {
+            this.channels[ channel ].processState(state)
+        }
     }
 
     /**
@@ -79,14 +103,15 @@ class EleroStick
 
         this.log("Stick reported channels: ", channels);
 
-        var stick = this;
+        this.channelIds = channels
+        var stick = this
 
         // For each channel we will generate the corresponding 
 
         channels.forEach(function(channel) {
 
             var uuid = stick.channelUUID(channel)
-            var accessory = stick.channels[uuid]
+            var accessory = stick.accessories[uuid]
 
             // Check if we have a corresponding accessory configuration
             // for that channel that we can use to complement the accessory
@@ -101,7 +126,7 @@ class EleroStick
             if (accessory === undefined) {
                 channelConfig[ "channel" ] = channel
                 channelConfig[ "uuid" ] = uuid
-            
+
                 if (channelConfig["name"] === undefined) {
                     channelConfig[ "name" ] = "Channel " + channel;
                 }
@@ -109,8 +134,7 @@ class EleroStick
                 stick.doAddAccessoryFromConfig(channelConfig);
             }
             else {
-                stick.log("Online: %s [%s]", accessory.displayName);
-                stick.trackChannel(new EleroChannel(stick.log, accessory.accessory, stick, channel, false));
+                stick.log("Online: %s", accessory.displayName);
             }
 
         })        
@@ -129,53 +153,50 @@ class EleroStick
 	 */
 	trackChannel(eleroChannel) {
         this.log("Register [%s] = ", eleroChannel.accessory.UUID, eleroChannel)
-        this.channels[ eleroChannel.accessory.UUID ] = eleroChannel
-        this.accessories[ eleroChannel.channel ] = eleroChannel.accessory
+        this.channels[ eleroChannel.channel ] = eleroChannel
+        this.accessories[ eleroChannel.UUID ] = eleroChannel.accessory
 	}
 	
 	/**
 	 * We are building a platformAccessory from the given configuration
 	 * and wrap it into a EleroChannel
 	 */
-	doAddAccessoryFromConfig(accessoryConfig, cachedPlatformAccessory=null) {
+	doAddAccessoryFromConfig(accessoryConfig, accessory=null) {
             
-        this.log("Checking registry: [%s]", accessoryConfig.uuid)
-
-		const existingAccessory = this.channels[accessoryConfig.uuid];
+		const existingAccessory = this.accessories[accessoryConfig.uuid];
     	let needToRegisterPlatformAccessory = false;
         
-        this.log("doAddAccessoryFromConfig", accessoryConfig.uuid)
-        this.log(" - existingAccessory: ", existingAccessory)
-        
-    	if (cachedPlatformAccessory === null) {
+        // This is the case if the accessory needs to be created from config
+    	if (accessory === null) {
     	
 	    	if (existingAccessory) {
-	        	cachedPlatformAccessory = existingAccessory.platformAccessory;
+	        	accessory = existingAccessory.platformAccessory;
 	      	} 
 	      	else {
         		const uuid = this.channelUUID(accessoryConfig.channel);
-        		cachedPlatformAccessory = new Accessory(accessoryConfig.name, uuid);
+        		accessory = new Accessory(accessoryConfig.name, uuid);
+                accessory.context = {};
+
                 needToRegisterPlatformAccessory = true;
-                cachedPlatformAccessory.context = {};
       		}
-      		
-      		cachedPlatformAccessory.context.config = accessoryConfig;
+              
+            // Updating the config in the accessory
+      		accessory.context.config = accessoryConfig;
     	}
 
         this.log(" - needToRegisterPlatformAccessory: ", needToRegisterPlatformAccessory)
 
     	if (existingAccessory === undefined) {
-            this.log(" - creatingAccessory")
-            const accessory = new EleroChannel(this.log, cachedPlatformAccessory, this, accessoryConfig.channel, false);
-      		this.trackChannel(accessory);
+            const eleroChannel = new EleroChannel(this.log, accessory, this, accessoryConfig.channel, false);
+      		this.trackChannel(eleroChannel);
     	}
 
     	if (needToRegisterPlatformAccessory) {
-    		this.log.log(" - Registering accessory [%s]", cachedPlatformAccessory.UUID);
-      		this.api.registerPlatformAccessories(PluginName, PlatformName, [cachedPlatformAccessory]);
+      		this.api.registerPlatformAccessories(PluginName, PlatformName, [accessory]);
     	}        
     } 
 
+/*
     // Handler will be invoked when user try to config your plugin.
     // Callback can be cached and invoke when necessary.
     configurationRequestHandler(context, request, callback) {
@@ -256,7 +277,7 @@ class EleroStick
         // Invoke callback to update setup UI
         callback(respDict);
     }    
-  
+*/
     updateAccessoriesReachability() {
         this.log("Update Reachability");
         for (var index in this.accessories) {
@@ -268,13 +289,17 @@ class EleroStick
     removeAccessory(accessory) {
 
         if (accessory) {
-            this.log("[" + accessory.description + "] Removed from HomeBridge.");
+            this.log("[" + accessory.description + "] Removed from HomeBridge.")
 
-            if (this.channels[accessory.UUID]) {
-                delete this.channels[accessory.UUID];
+            if (this.accessories[accessory.UUID]) {
+                delete this.accessories[accessory.UUID]
             }
 
-	        this.api.unregisterPlatformAccessories(PluginName, PlatformName, [accessory]);
+            if (this.channels[accessory.context.config.channel]) {
+                delete this.channels[accessory.context.config.channel]
+            }
+
+	        this.api.unregisterPlatformAccessories(PluginName, PlatformName, [accessory])
         }
     };
 
@@ -282,18 +307,19 @@ class EleroStick
     removeAccessories() {
         this.log("Remove Accessories");
         
-        this.api.unregisterPlatformAccessories(PluginName, PlatformName, this.accessories);
+        this.api.unregisterPlatformAccessories(PluginName, PlatformName, this.accessories)
   
-        this.accessories = [];
+        this.accessories = {}
+        this.channels = {}
     }    
 }
 
- 
+
 class EleroChannel
 {
     constructor(log, accessory, stick, channel, register=true) {
 		
-		log.log("Accessory: ", accessory);
+		log.log("Channel for: ", accessory);
         
         var info = accessory.getService(Service.AccessoryInformation);
 
@@ -308,14 +334,49 @@ class EleroChannel
     
         this.accessory = accessory;
         this.channel = channel;
+        this.UUID = accessory.UUID
         this.log = log;
         this.stick = stick;
 
+        this._positionHeld = 0;
         this._lastPosition = 0; // last known position of the blinds, down by default
         this._currentPositionState = 2; // stopped by default
         this._currentTargetPosition = 0; // down by default
 
         this.registerServices();
+    }
+
+    processState(state) {
+
+        if (state == ELERO_STATES.TOP_VENT_POS_STOP) {
+            this.currentPositionState = Characteristic.PositionState.STOPPED
+            this.lastPosition = 33
+            this._currentTargetPosition = 33
+        }
+        else if (state == ELERO_STATES.BOTTOM_INTERM_POS_STOP) {
+            this.currentPositionState = Characteristic.PositionState.STOPPED
+            this.lastPosition = 67
+            this._currentTargetPosition = 67
+        }
+        else if (state == ELERO_STATES.TOP_POS_STOP) {
+            this.currentPositionState = Characteristic.PositionState.STOPPED
+            this.lastPosition = 100
+            this._currentTargetPosition = 100
+        }
+        else if (state == ELERO_STATES.BOTTOM_POS_STOP) {
+            this.currentPositionState = Characteristic.PositionState.STOPPED
+            this.lastPosition = 0
+            this._currentTargetPosition = 0
+        }
+        else if (state == ELERO_STATES.MOVING_DOWN) {
+            this.currentPositionState = Characteristic.PositionState.DECREASING
+        }
+        else if (state == ELERO_STATES.MOVING_UP) {
+            this.currentPositionState = Characteristic.PositionState.INCREASING
+        }
+        else if (state == ELERO_STATES.STOP_UNDEFINED_POS) {
+            this.currentPositionState = Characteristic.PositionState.STOPPED
+        }
     }
 
     get lastPosition() { return this._lastPosition; }
@@ -337,10 +398,19 @@ class EleroChannel
         this.service.getCharacteristic(Characteristic.TargetPosition).setValue(this._currentTargetPosition);
     }
 
+    set holdPosition(value) {
+        this._positionHeld = value;
+        this.service.getCharacteristic(Characteristic.HoldPosition).setValue(this._positionHeld);
+    }
+
     registerServices() {
     
-        this.service = this.accessory.addService(Service.WindowCovering, this.name);
-    	
+        this.service = this.accessory.getService(Service.WindowCovering)
+
+        if ((this.service === null) || (this.service === undefined)) {
+            this.service = this.accessory.addService(Service.WindowCovering, this.name);
+        }
+
         // the current position (0-100%)
         // https://github.com/KhaosT/HAP-NodeJS/blob/master/lib/gen/HomeKitTypes.js#L493
         this.service
@@ -360,6 +430,30 @@ class EleroChannel
             .getCharacteristic(Characteristic.TargetPosition)
             .on('get', this.getTargetPosition.bind(this))
             .on('set', this.setTargetPosition.bind(this));
+
+        // Hold Position stopps the service
+        // https://github.com/KhaosT/HAP-NodeJS/blob/master/lib/gen/HomeKitTypes.js#L855
+        this.service
+            .getCharacteristic(Characteristic.HoldPosition)
+            .on('get', this.getHoldPosition.bind(this))
+            .on('set', this.setHoldPosition.bind(this));
+    }
+
+    getHoldPosition(callback) {
+        this.log('Requested HoldPosition: %s', this._positionHeld);
+        callback(null, this._positionHeld);
+    }
+
+    setHoldPosition(value, callback) {
+        this.log('Set HoldPosition: ', value);
+
+        if (value == 1) {
+            this.stick.serialConnection.commandStop([this.channel])
+        }
+
+        this._positionHeld = value
+
+        callback(null);
     }
 
     getCurrentPosition(callback) {
@@ -377,25 +471,24 @@ class EleroChannel
         callback(null, this.currentTargetPosition);
     }
 
-    getCurrentTiltAngle(callback) {
-        callback(null, this.currentTiltAngle);
-    }
-
-    getTargetTiltAngle(callback) {
-        callback(null, this.currentTargetTiltAngle);
-    }
-
     setTargetPosition(pos, callback) {
         this.log('Set TargetPosition: %d', pos);
         this._currentTargetPosition = pos;
+        this.positionHeld = 0
 
-        if (pos == 0) {
-            this.stick.serialConnection.easySend([this.channel], EASY_COMMAND.UP)
+        if (pos <= 25) {
+            this.stick.serialConnection.commandDown([this.channel])
+        }
+        else if (pos <= 50) {
+            this.stick.serialConnection.commandIntermediatePosition([this.channel])
+        }
+        else if (pos <= 75) {
+            this.stick.serialConnection.commandVentilationPosition([this.channel])
         }
         else {
-            this.stick.serialConnection.easySend([this.channel], EASY_COMMAND.DOWN)
-
+            this.stick.serialConnection.commandUp([this.channel])
         }
+
         callback(null);
     }
 
