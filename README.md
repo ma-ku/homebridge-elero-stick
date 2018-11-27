@@ -2,8 +2,6 @@
 
 `homebridge-elero-stick` is a plugin for Homebridge that allows controlling Elero (http://www.elero.de) motors for roller shutters and blinds (SunTop, RolTop, VariEco products) wirelessly with the Elero Transmitter Stick (https://www.elero.com/en/products/control-systems/centero/).
 
-Control your `http`-based blinds via Homebridge!
-
 ## Installation
 
 If you are new to Homebridge, please first read the Homebridge [documentation](https://www.npmjs.com/package/homebridge).
