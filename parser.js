@@ -18,65 +18,65 @@ const Transform = require('stream').Transform
  */
 class EleroParser extends Transform {
 
-  constructor(options = {}) {
-    super(options)
+    constructor(options = {}) {
+        super(options)
 
-    // Current position in the receiving buffer
-    this.position = 0
+        // Current position in the receiving buffer
+        this.position = 0
 
-    // This is the maximum length of a datagram
-    this.maxLength = 7
+        // This is the maximum length of a datagram
+        this.maxLength = 7
 
-    // The expected length for the current datagram
-    this.length = 0
+        // The expected length for the current datagram
+        this.length = 0
 
-    // We expect not more than 7 bytes per datagram
-    this.buffer = Buffer.alloc(this.maxLength)
-  }
+        // We expect not more than 7 bytes per datagram
+        this.buffer = Buffer.alloc(this.maxLength)
+    }
 
   _transform(chunk, encoding, callback) {
-    let cursor = 0
-    while (cursor < chunk.length) {
-        this.buffer[this.position] = chunk[cursor]
-        cursor++
+        let cursor = 0
+        while (cursor < chunk.length) {
+            this.buffer[this.position] = chunk[cursor]
+            cursor++
 
-        // Check if this is an Elero message, if not, flush the data
-        if (this.position == 0) {
-            if (this.buffer[0] != 0xAA) {
+            // Check if this is an Elero message, if not, flush the data
+            if (this.position == 0) {
+                if (this.buffer[0] != 0xAA) {
+                    this.push(this.buffer)
+                    this.buffer = Buffer.alloc(this.maxLength)
+                    this.position = 0
+
+                    continue
+                }
+            }
+
+            // When the second byte is received, we can determine the length
+            // of the payload and add one header byte and one checksum byte
+            if (this.position == 1) {
+                this.length = 1 + this.buffer[1] + 1;
+            }
+            
+            // We can proceed
+            this.position++
+
+            // Check if we read all data 
+            if (this.position == this.length) {
                 this.push(this.buffer)
-                this.buffer = Buffer.alloc(this.length)
+                this.buffer = Buffer.alloc(this.maxLength)
                 this.position = 0
-
-                continue
             }
         }
 
-        // When the second byte is received, we can determine the length
-        // of the payload and add one header byte and one checksum byte
-        if (this.position == 1) {
-            this.length = 1 + this.buffer[1] + 1;
-        }
-        
-        // We can proceed
-        this.position++
-
-        // Check if we read all data 
-        if (this.position === this.length) {
-            this.push(this.buffer)
-            this.buffer = Buffer.alloc(this.maxLength)
-            this.position = 0
-        }
+        callback()
     }
 
-    callback()
-  }
-
-  _flush(cb) {
-    this.push(this.buffer.slice(0, this.position))
-    this.buffer = Buffer.alloc(this.maxLength)
-    this.position = 0
-    cb()
-  }
+    _flush(cb) {
+        this.push(this.buffer.slice(0, this.position))
+        this.buffer = Buffer.alloc(this.maxLength)
+        this.position = 0
+        cb()
+    }
 }
 
 module.exports = EleroParser
