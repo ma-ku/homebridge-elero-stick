@@ -221,7 +221,11 @@ class EleroStickConnection extends EventEmitter {
     }
 
     easyInfo(channels) {
+        this.log("easyInfo", channels)
         channels = this.checkChannels(channels)
+        if (channels.length == 0) {
+            channels = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
+        }
         this.sendCommand([0xaa, 0x04, 0x4e, this.highChannelBits(channels), this.lowChannelBits(channels)]);
     }
       
