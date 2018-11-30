@@ -1,6 +1,6 @@
 {
   "name": "homebridge-elero-stick",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Elero funkstick for homebridge: https://github.com/ma-ku/homebridge-elero-stick",
   "main": "index.js",
   "license": "MIT",
