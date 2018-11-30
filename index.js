@@ -6,6 +6,7 @@ const PlatformName = "EleroStick";
 const EleroStickConnection = require('./stick').EleroStickConnection;
 const ELERO_STATES = require('./stick').ELERO_STATES;
 
+const { PerformanceObserver, performance } = require('perf_hooks');
 const EventEmitter = require('events').EventEmitter;
 
 let Accessory, Service, Characteristic, UUIDGen;
@@ -36,12 +37,19 @@ class EleroStick
         this.port = config['port'];
         this.config = config;
         
+        // We will request an update from the stick every 5 seconds
+        this.defaultUpdateInterval = 5000
+        this.updateInterval = this.defaultUpdateInterval
+        this.movingUpdateInterval = 1000
+
+        this.lastStatusTimestamp = performance.now()
+
         // This will store the actual platformAccessory instances, indexed by their uuid
         this.accessories = {};
         
         // An this will store the EleroChannel instance wrapping above accessories,
         // indexed by their channel number
-		this.channels = {};
+	    this.channels = {};
         this.channelIds = [];
         
         var stick = this;
@@ -77,23 +85,48 @@ class EleroStick
 
         var stick = this
 
+        if (isNaN(this.updateInterval)) {
+            this.updateInterval = this.defaultUpdateInterval
+        }
+
+        this.log("checkChannelStates. Interval: ",Math.max(1000, this.updateInterval))
+
         setTimeout(function() {
             stick.serialConnection.easyInfo(stick.channelIds)
 
             stick.checkChannelStates()
-        }, 5000)
+        }, Math.min(1000, this.updateInterval))
     }
 
     processState(channel, state) {
+        var newTimestamp = performance.now()
+        var newInterval = this.updateInterval
+        var first = true
+
         if (this.channels[ channel ] !== undefined) {
-            this.channels[ channel ].processState(state)
+            this.channels[ channel ].processState(state, newTimestamp)
+        
+            if (first) {
+                newInterval = this.channels[ channel ].reportingInterval
+                first = false
+            }
+            else {
+                newInterval = Math.min(newInterval, this.channels[ channel ].reportingInterval)
+            }
         }
+
+        if (isNaN(newInterval)) {
+            newInterval = this.defaultUpdateInterval
+        }
+
+        this.updateInterval = newInterval
+        this.lastStatusTimestamp = newTimestamp
     }
 
     /**
      * Receive the learned channels from the linked Elero Stick
      * and creates the corresponding accessory for it, if not already
-     * defined. Furhtermore will all registered accessories checked 
+     * defined. Furthermore will all registered accessories checked 
      * if they are still attached to a learned channel and eventually
      * will get set to unreachable.
      * 
@@ -127,16 +160,19 @@ class EleroStick
                 channelConfig[ "channel" ] = channel
                 channelConfig[ "uuid" ] = uuid
 
-                if (channelConfig["name"] === undefined) {
-                    channelConfig[ "name" ] = "Channel " + channel;
+                if (channelConfig["duration"] === undefined) {
+                    channelConfig[ "duration" ] = 0
                 }
-                
+
+                if (channelConfig["name"] === undefined) {
+                    channelConfig[ "name" ] = "Channel " + channel
+                }
+
                 stick.doAddAccessoryFromConfig(channelConfig);
             }
             else {
                 stick.log("Online: %s", accessory.displayName);
             }
-
         })        
     }
 
@@ -152,7 +188,6 @@ class EleroStick
 	 * Store an EleroChannel instance internally
 	 */
 	trackChannel(eleroChannel) {
-        this.log("Register [%s] = ", eleroChannel.accessory.UUID, eleroChannel)
         this.channels[ eleroChannel.channel ] = eleroChannel
         this.accessories[ eleroChannel.UUID ] = eleroChannel.accessory
 	}
@@ -163,7 +198,7 @@ class EleroStick
 	 */
 	doAddAccessoryFromConfig(accessoryConfig, accessory=null) {
             
-		const existingAccessory = this.accessories[accessoryConfig.uuid];
+	    const existingAccessory = this.accessories[accessoryConfig.uuid];
     	let needToRegisterPlatformAccessory = false;
         
         // This is the case if the accessory needs to be created from config
@@ -175,105 +210,42 @@ class EleroStick
 	      	else {
         		const uuid = this.channelUUID(accessoryConfig.channel);
         		accessory = new Accessory(accessoryConfig.name, uuid);
-                accessory.context = {};
+	            accessory.context = {};
 
-                needToRegisterPlatformAccessory = true;
+	            needToRegisterPlatformAccessory = true;
       		}
               
-            // Updating the config in the accessory
+	        // Updating the config in the accessory
       		accessory.context.config = accessoryConfig;
     	}
+        else {
+            // Check if we need to amend an existing config?
+            var channelConfig = this.config.channels[ accessoryConfig.channel ]
+            if (channelConfig === undefined) {
+                channelConfig = {}
+            }
+    
+            if (channelConfig["duration"] !== undefined) {
+                accessoryConfig.duration = channelConfig["duration"]
+            }
+            else {
+                accessoryConfig.duration = 0
+            }
+
+            if (channelConfig["name"] !== undefined) {
+                accessoryConfig.name = channelConfig["name"]
+            }
+        }
 
     	if (existingAccessory === undefined) {
-            const eleroChannel = new EleroChannel(this.log, accessory, this, accessoryConfig.channel, false);
-      		this.trackChannel(eleroChannel);
+            const eleroChannel = new EleroChannel(this.log, accessory, this, accessoryConfig.channel);
+		    this.trackChannel(eleroChannel);
     	}
 
     	if (needToRegisterPlatformAccessory) {
       		this.api.registerPlatformAccessories(PluginName, PlatformName, [accessory]);
     	}        
     } 
-
-    // Handler will be invoked when user try to config your plugin.
-    // Callback can be cached and invoke when necessary.
-    configurationRequestHandler(context, request, callback) {
-
-        this.log("Context: ", JSON.stringify(context));
-        this.log("Request: ", JSON.stringify(request));
-    
-        // Check the request response
-        if (request && request.response && request.response.inputs && request.response.inputs.name) {
-            this.addAccessory(request.response.inputs.name);
-        
-            // Invoke callback with config will let homebridge save the new config into config.json
-            // Callback = function(response, type, replace, config)
-            // set "type" to platform if the plugin is trying to modify platforms section
-            // set "replace" to true will let homebridge replace existing config in config.json
-            // "config" is the data platform trying to save
-            callback(null, "platform", true, {"platform":"SamplePlatform", "otherConfig":"SomeData"});
-            return;
-        }
-    
-        // - UI Type: Input
-        // Can be used to request input from user
-        // User response can be retrieved from request.response.inputs next time
-        // when configurationRequestHandler being invoked
-    
-        var respDict = {
-            "type": "Interface",
-            "interface": "input",
-            "title": "Add Accessory",
-            "items": [
-                {
-                "id": "name",
-                "title": "Name",
-                "placeholder": "Fancy Light"
-                }//, 
-                // {
-                //   "id": "pw",
-                //   "title": "Password",
-                //   "secure": true
-                // }
-            ]
-        }
-    
-        // - UI Type: List
-        // Can be used to ask user to select something from the list
-        // User response can be retrieved from request.response.selections next time
-        // when configurationRequestHandler being invoked
-    
-        // var respDict = {
-        //   "type": "Interface",
-        //   "interface": "list",
-        //   "title": "Select Something",
-        //   "allowMultipleSelection": true,
-        //   "items": [
-        //     "A","B","C"
-        //   ]
-        // }
-    
-        // - UI Type: Instruction
-        // Can be used to ask user to do something (other than text input)
-        // Hero image is base64 encoded image data. Not really sure the maximum length HomeKit allows.
-    
-        // var respDict = {
-        //   "type": "Interface",
-        //   "interface": "instruction",
-        //   "title": "Almost There",
-        //   "detail": "Please press the button on the bridge to finish the setup.",
-        //   "heroImage": "base64 image data",
-        //   "showActivityIndicator": true,
-        // "showNextButton": true,
-        // "buttonText": "Login in browser",
-        // "actionURL": "https://google.com"
-        // }
-    
-        // Plugin can set context to allow it track setup process
-        context.ts = "Hello";
-    
-        // Invoke callback to update setup UI
-        callback(respDict);
-    }    
 
     updateAccessoriesReachability() {
         this.log("Update Reachability");
@@ -296,7 +268,7 @@ class EleroStick
                 delete this.channels[accessory.context.config.channel]
             }
 
-	        this.api.unregisterPlatformAccessories(PluginName, PlatformName, [accessory])
+		this.api.unregisterPlatformAccessories(PluginName, PlatformName, [accessory])
         }
     };
 
@@ -311,10 +283,15 @@ class EleroStick
     }    
 }
 
-
+/**
+ * This class represents a single channel, connected to an Elero motor. Currently not all features 
+ * offered by the Stick are implemented as testing was only done with a RolTop shutter motor. Features
+ * such as Ventialation Position or Intermediate Position are not supported by that type of motor as well
+ * as the corresponding states are not reported back.
+ */
 class EleroChannel
 {
-    constructor(log, accessory, stick, channel, register=true) {
+    constructor(log, accessory, stick, channel) {
 		
         var info = accessory.getService(Service.AccessoryInformation);
 
@@ -324,7 +301,7 @@ class EleroChannel
         accessory.context.model = "Channel " + channel;
         info.setCharacteristic(Characteristic.Model, accessory.context.model.toString());
     
-        accessory.context.serial = stick.serial + ":" + channel;
+        accessory.context.serial = stick.port + ":" + channel;
         info.setCharacteristic(Characteristic.SerialNumber, accessory.context.serial.toString());    
     
         this.accessory = accessory;
@@ -332,51 +309,170 @@ class EleroChannel
         this.UUID = accessory.UUID
         this.log = log;
         this.stick = stick;
+        this.reportingInterval = 5000
 
+        // Time of the shutter to move from 0 to 100
+        this._duration = accessory.context.config.duration
+
+        // This is a marker if we are moving the shutter ourselves. If not, it might have been
+        // controlled by a local switch and we will not interfere with that manual control
+        this.isMonitoring = false
+        
         this._positionHeld = 0;
         this._lastPosition = 0; // last known position of the blinds, down by default
         this._currentPositionState = 2; // stopped by default
         this._currentTargetPosition = 0; // down by default
+        this._lastStatusTimestamp = performance.now()
 
         this.registerServices();
     }
 
-    processState(state) {
+    processState(state, currentTimestamp) {
 
-        if (state == ELERO_STATES.TOP_VENT_POS_STOP) {
-            this.currentPositionState = Characteristic.PositionState.STOPPED
-            this.lastPosition = 33
-            this._currentTargetPosition = 33
+        var newState = Characteristic.PositionState.STOPPED
+        var newPosition = this._lastPosition
+        var newTargetPosition = this._currentTargetPosition
+
+        var newInterval = this.updateInterval
+
+        if (this._currentPositionState != Characteristic.PositionState.STOPPED) {
+            // We are moving so figure out the elapsed time
+            // and adjust the lastPosition accordingly.
+
+            var direction = 1
+            var check = (position, targetPosition) => { return (position >= targetPosition); }
+
+            if (this._currentPositionState == Characteristic.PositionState.DECREASING) {
+                direction = -1
+                check = (position, targetPosition) => { return (position <= targetPosition); }
+            }
+
+            if (!this.isMonitoring) {
+                // We will not interrupt
+                check = (position, targetPosition) => { return false; }
+            }
+
+            var elapsed = (currentTimestamp - this._lastStatusTimestamp)
+
+            if (elapsed >= 1) {
+
+                if (this._duration > 0) {
+                    var delta = Math.max(0, 100 * elapsed / this._duration)
+                    var newPosition = Math.min(100, Math.max(0, this._lastPosition + direction * delta))
+                    this.updateLastPosition(newPosition)
+
+                    // If we are driving to an intermediate position, we need to stop 
+                    // ourselves
+                    if (check(newPosition, this._currentTargetPosition)) {
+                        this.stick.serialConnection.commandStop([this.channel])
+                    }
+                }
+
+                this._lastStatusTimestamp = currentTimestamp
+            }
         }
-        else if (state == ELERO_STATES.BOTTOM_INTERM_POS_STOP) {
-            this.currentPositionState = Characteristic.PositionState.STOPPED
-            this.lastPosition = 67
-            this._currentTargetPosition = 67
+
+        this.log("[%d] State: %d", this.channel, state)
+
+        if (state == ELERO_STATES.BOTTOM_POS_STOP) {
+            newState = Characteristic.PositionState.STOPPED
+            newPosition = 0
+            newTargetPosition = 0
+            newInterval = this.stick.defaultUpdateInterval
+
+            this.isMonitoring = false
         }
         else if (state == ELERO_STATES.TOP_POS_STOP) {
-            this.currentPositionState = Characteristic.PositionState.STOPPED
-            this.lastPosition = 100
-            this._currentTargetPosition = 100
+            newState = Characteristic.PositionState.STOPPED
+            newPosition = 100
+            newTargetPosition = 100
+            newInterval = this.stick.defaultUpdateInterval
+
+            this.isMonitoring = false
         }
-        else if (state == ELERO_STATES.BOTTOM_POS_STOP) {
-            this.currentPositionState = Characteristic.PositionState.STOPPED
-            this.lastPosition = 0
-            this._currentTargetPosition = 0
-        }
+        // Not supported/tested for now, might be verified later with
+        // the right motor available?!
+
+        // else if (state == ELERO_STATES.TOP_VENT_POS_STOP) {
+        //     newState = Characteristic.PositionState.STOPPED
+        //     newPosition = 33
+        //     newTargetPosition = 33
+        //     newInterval = this.stick.defaultUpdateInterval
+        // }
+        // else if (state == ELERO_STATES.BOTTOM_INTERM_POS_STOP) {
+        //     newState = Characteristic.PositionState.STOPPED
+        //     newPosition = 67
+        //     newTargetPosition = 67
+        //     newInterval = this.stick.defaultUpdateInterval
+        // }
         else if (state == ELERO_STATES.MOVING_DOWN) {
-            this.currentPositionState = Characteristic.PositionState.DECREASING
+            newState = Characteristic.PositionState.DECREASING
+            newInterval = this.stick.movingUpdateInterval
         }
         else if (state == ELERO_STATES.MOVING_UP) {
-            this.currentPositionState = Characteristic.PositionState.INCREASING
+            newState = Characteristic.PositionState.INCREASING
+            newInterval = this.stick.movingUpdateInterval
+        }
+        else if (state == ELERO_STATES.START_MOVE_DOWN) {
+            newState = Characteristic.PositionState.DECREASING
+            newInterval = this.stick.movingUpdateInterval
+        }
+        else if (state == ELERO_STATES.START_MOVE_UP) {
+            newState = Characteristic.PositionState.INCREASING
+            newInterval = this.stick.movingUpdateInterval
+        }
+        else if (state == ELERO_STATES.BLOCKING) {
+            newState = Characteristic.PositionState.STOPPED
+            newInterval = this.stick.defaultUpdateInterval
+
+            this.isMonitoring = false
+        }
+        else if (state == ELERO_STATES.OVERHEATED) {
+            newState = Characteristic.PositionState.STOPPED
+            newInterval = this.stick.defaultUpdateInterval
+
+            this.isMonitoring = false
         }
         else if (state == ELERO_STATES.STOP_UNDEFINED_POS) {
-            this.currentPositionState = Characteristic.PositionState.STOPPED
+            newState = Characteristic.PositionState.STOPPED
+            newInterval = this.defaultUpdateInterval
+
+            this.isMonitoring = false
         }
+
+        this._lastStatusTimestamp = currentTimestamp
+
+        this.updateLastPosition(newPosition)
+        this.updateTargetPosition(newTargetPosition)
+        this.updatePositionState(newState)
+
+        this.reportingInterval = newInterval
     }
 
     get lastPosition() { return this._lastPosition; }
     get currentPositionState() { return this._currentPositionState; }
     get currentTargetPosition() { return this._currentTargetPosition; }
+
+    updateLastPosition(value) {
+        // this.log("Updating lastPosition: ", this._lastPosition)
+        this._lastPosition = value
+        this.service.getCharacteristic(Characteristic.CurrentPosition)
+                    .updateValue(this._lastPosition);
+    }
+
+    updateTargetPosition(value) {
+        // this.log("Updating currentTargetPosition: ", this._currentTargetPosition)
+        this._currentTargetPosition = value
+        this.service.getCharacteristic(Characteristic.TargetPosition)
+                    .updateValue(this._currentTargetPosition);
+    }
+
+    updatePositionState(value) {
+        // this.log("Updating currentPositionState: ", this._currentPositionState)
+        this._currentPositionState = value
+        this.service.getCharacteristic(Characteristic.PositionState)
+                    .updateValue(this._currentPositionState);
+    }
 
     set lastPosition(value) {
         this._lastPosition = value;
@@ -471,19 +567,22 @@ class EleroChannel
         this._currentTargetPosition = pos;
         this.positionHeld = 0
 
-        if (pos <= 25) {
+        if ((pos <= this._lastPosition) || (pos <= 10)) {
             this.stick.serialConnection.commandDown([this.channel])
         }
-        else if (pos <= 50) {
-            this.stick.serialConnection.commandIntermediatePosition([this.channel])
-        }
-        else if (pos <= 75) {
-            this.stick.serialConnection.commandVentilationPosition([this.channel])
-        }
+        // else if (pos <= 50) {
+        //     this.stick.serialConnection.commandIntermediatePosition([this.channel])
+        // }
+        // else if (pos <= 75) {
+        //     this.stick.serialConnection.commandVentilationPosition([this.channel])
+        // }
         else {
             this.stick.serialConnection.commandUp([this.channel])
         }
 
+        this.reportingInterval = this.stick.movingUpdateInterval
+        this.isMonitoring = true
+        
         callback(null);
     }
 
