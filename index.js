@@ -89,13 +89,10 @@ class EleroStick
             this.updateInterval = this.defaultUpdateInterval
         }
 
-        this.log("checkChannelStates. Interval: ",Math.max(1000, this.updateInterval))
-
         setTimeout(function() {
             stick.serialConnection.easyInfo(stick.channelIds)
-
             stick.checkChannelStates()
-        }, Math.min(1000, this.updateInterval))
+        }, Math.max(1000, this.updateInterval))
     }
 
     processState(channel, state) {
@@ -365,14 +362,13 @@ class EleroChannel
                     // ourselves
                     if (check(newPosition, this._currentTargetPosition)) {
                         this.stick.serialConnection.commandStop([this.channel])
+                        this.isMonitoring = false
                     }
                 }
 
                 this._lastStatusTimestamp = currentTimestamp
             }
         }
-
-        this.log("[%d] State: %d", this.channel, state)
 
         if (state == ELERO_STATES.BOTTOM_POS_STOP) {
             newState = Characteristic.PositionState.STOPPED
@@ -582,7 +578,7 @@ class EleroChannel
 
         this.reportingInterval = this.stick.movingUpdateInterval
         this.isMonitoring = true
-        
+
         callback(null);
     }
 
