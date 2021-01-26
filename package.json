@@ -1,10 +1,22 @@
 {
   "name": "homebridge-elero-stick",
-  "version": "0.2.1",
+  "version": "1.0.0",
+  "displayName": "Elero Remote Control",
   "description": "Elero funkstick for homebridge: https://github.com/ma-ku/homebridge-elero-stick",
-  "main": "index.js",
-  "license": "MIT",
+  "main": "dist/elero-stick-platform.js",
+  "scripts": {
+    "clean": "rimraf ./dist",
+    "build": "rimraf ./dist && tsc",
+    "watch": "npm run build && npm link && nodemon",
+    "prepublishOnly": "npm run build",
+    "postpublish": "npm run clean",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mathias Kühn <mathias.kuehn@me.com>",
   "homepage": "https://github.com/ma-ku/homebridge-elero-stick#readme",
+  "engines": {
+    "homebridge": ">=1.0.0"
+  },
   "keywords": [
     "homebridge",
     "homebridge-plugin",
@@ -13,37 +25,27 @@
     "roltop",
     "suntop"
   ],
-  "directories": {
-    "doc": "docs"
-  },
-  "scripts": {
-    "build": "babel src -d lib",
-    "test": "jest"
-  },
+  "license": "MIT",
+  "files": [
+    "config.schema.json",
+    "LICENSE",
+    "dist"
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/ma-ku/homebridge-elero-stick.git"
+    "url": "git+https://github.com/ma-ku/homebridge-elero-stick.git"
   },
   "bugs": {
     "url": "https://github.com/ma-ku/homebridge-elero-stick/issues"
   },
   "devDependencies": {
-    "babel-cli": "^6.24.1",
-    "babel-core": "^6.24.1",
-    "babel-preset-es2015": "^6.24.1",
-    "babel-register": "^6.24.1",
-    "jest": "^23.0"
-  },
-  "engines": {
-    "homebridge": ">=0.4.44",
-    "node": ">=10.0.0"
+    "@types/node": "10.17.19",
+    "@types/serialport": "^8.0.1",
+    "homebridge": "^1.0.4",
+    "rimraf": "^3.0.2",
+    "typescript": "^3.8.3"
   },
   "dependencies": {
-    "homebridge": "^0.4.45",
-    "request": "^2.79.0",
-    "serialport": "^7.0.2"
-  },
-  "jest": {
-    "testRegex": "tests\\/.+_spec\\.jsx?$"
+    "serialport": "^9.0.6"
   }
 }

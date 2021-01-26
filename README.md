@@ -26,12 +26,12 @@ Add the platform in `config.json` in your home directory inside `.homebridge`.
         "name": "EleroStick",
         "port": "/dev/tty.usbserial-A603IUAZ",
 
-        "channels": {
-              "0" : {
+        "motors": [
+              {
                   "name": "Window Kitchen",
                   "duration": 24000
               }
-        }
+        ]
       }
     ]
 ```
