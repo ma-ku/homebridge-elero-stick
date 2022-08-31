@@ -11,7 +11,7 @@ import {
 
 import { EleroAccessory } from './elero-accessory';
 
-import { PerformanceObserver, performance } from 'perf_hooks';
+import { performance } from 'perf_hooks';
 import { EleroMotorConfig } from "./model/elero-motor-config";
 import { EleroStick, ELERO_STATES } from "./usb/elero-stick";
 
@@ -30,7 +30,9 @@ export class EleroShutterAccessory extends EleroAccessory {
     protected isMonitoring: boolean = false;
 
     protected _positionHeld: number = 0;
-    
+
+    protected _reverse: boolean = false;
+
     // last known position of the blinds, down by default
     protected _lastPosition: number = 0; 
     
@@ -38,13 +40,11 @@ export class EleroShutterAccessory extends EleroAccessory {
     protected _currentTargetPosition: number = 0; 
     
     // Stopped by default
-    protected _currentPositionState: number;
+    protected _currentPositionState: number = 0;
 
     protected positionState: number = 0;
 
     protected _lastStatusTimestamp: number = performance.now()
-
-    protected _reverse: boolean = false;
 
     // Needed to avooid duplicate log outputs if nothing changes
     protected _lastInfo: string = '';
@@ -125,6 +125,11 @@ export class EleroShutterAccessory extends EleroAccessory {
         callback(null, this.name);
     }
 
+    // Provide the outside position value depending on the reverse direction flag
+    protected calculatePosition(value: number) : number {
+        return ( this._reverse ? 100 - value : value);
+    }
+
     get isJammed() { return this._jammed; }
 
     protected getObstructionDetected(callback: CharacteristicGetCallback) {
@@ -158,34 +163,44 @@ export class EleroShutterAccessory extends EleroAccessory {
     
     protected updateLastPosition(value: number): void {
         // TODO: Reflect reverse movement
-        this._lastPosition = value
-        this.log.debug("[%d][%s] Updating lastPosition: ", this.channel, this.name, this._lastPosition)
-        this.windowCoveringService
-        .getCharacteristic(this.hap.Characteristic.CurrentPosition)
-        .updateValue(this._lastPosition);
+        if (value >= 0 && value <= 100) {
+            this._lastPosition = value;
+
+            this.log.debug("[%d][%s] Updating lastPosition: %d", this.channel, this.name, this._lastPosition);
+            this.windowCoveringService
+                .getCharacteristic(this.hap.Characteristic.CurrentPosition)
+                .updateValue(this.calculatePosition(this._lastPosition));
+        }
+        else {
+            this.log.error("[%d][%s] Updating lastPosition with illegal value: %d: ", this.channel, this.name, value);
+        }
     }
     
     get currentTargetPosition() { return this._currentTargetPosition; }
 
     protected updateTargetPosition(value: number): void {
-        // TODO: Reflect reverse movement
-        this._currentTargetPosition = value
-        this.log.debug("[%d] Updating currentTargetPosition: ", this.channel, this._currentTargetPosition)
-        this.windowCoveringService
-                    .getCharacteristic(this.hap.Characteristic.TargetPosition)
-                    .updateValue(this._currentTargetPosition);
+        if (value >= 0 && value <= 100) {
+            this._currentTargetPosition = value;
+
+            this.log.debug("[%d] Updating currentTargetPosition: %d", this.channel, this._currentTargetPosition)
+            this.windowCoveringService
+                .getCharacteristic(this.hap.Characteristic.TargetPosition)
+                .updateValue(this.calculatePosition(this._currentTargetPosition));
+        }
+        else {
+            this.log.error("[%d][%s] Updating currentTargetPosition with illegal value: %d: ", this.channel, this.name, value);
+        }
     }
 
     protected getTargetPosition(callback: CharacteristicGetCallback) {
-        // TODO: Reflect reverse movement
         this.log.debug('[%d] Requested TargetPosition: %s', this.channel, this.currentTargetPosition);
-        callback(null, this.currentTargetPosition);
+        callback(null, this.calculatePosition(this.currentTargetPosition));
     }
 
     protected setTargetPosition(pos: CharacteristicValue, callback: CharacteristicSetCallback) {
         // TODO: Reflect reverse movement
         this.log.debug('[%d] Set TargetPosition: %d', this.channel, pos);
-        this._currentTargetPosition = (pos as number);
+        this._currentTargetPosition = this.calculatePosition(pos as number);
         this._positionHeld = 0
 
         var moving = false;
@@ -215,46 +230,47 @@ export class EleroShutterAccessory extends EleroAccessory {
 
     protected updatePositionState(value: number): void {
         this._currentPositionState = value
-        this.log.debug("[%d] Updating currentPositionState: ", this.channel, this._currentPositionState)
+
+        this.log.debug("[%d] Updating currentPositionState: %d", this.channel, this._currentPositionState)
         this.windowCoveringService
-                    .getCharacteristic(this.hap.Characteristic.PositionState)
-                    .updateValue(this._currentPositionState);
+            .getCharacteristic(this.hap.Characteristic.PositionState)
+            .updateValue(this.calculatePosition(this._currentPositionState));
     }
 
     set lastPosition(value) {
         this._lastPosition = value;
         this.log.debug("[%d] Setting lastPosition: ", this.channel, this._lastPosition)
         this.windowCoveringService
-                    .getCharacteristic(this.hap.Characteristic.CurrentPosition)
-                    .setValue(this._lastPosition);
+            .getCharacteristic(this.hap.Characteristic.CurrentPosition)
+            .setValue(this.calculatePosition(this._lastPosition));
     }
 
     set currentPositionState(value) {
         this._currentPositionState = value;
-        this.log.debug("[%d] Setting currentPositionState: ", this.channel, this._currentPositionState)
+        this.log.debug("[%d] Setting currentPositionState: %d", this.channel, this._currentPositionState)
         this.windowCoveringService
-                    .getCharacteristic(this.hap.Characteristic.PositionState)
-                    .setValue(this._currentPositionState);
+            .getCharacteristic(this.hap.Characteristic.PositionState)
+            .setValue(this._currentPositionState);
     }
 
     protected getCurrentPosition(callback:CharacteristicGetCallback) {
         this.log.debug('[%d] Requested CurrentPosition: %s', this.channel, this.lastPosition);
-        callback(null, this.lastPosition);
+        callback(null, this.calculatePosition(this.lastPosition));
     }
 
     set currentTargetPosition(value) {
         this._currentTargetPosition = value;
         this.log.debug("[%d] Setting currentTargetPosition: ", this.channel, this._currentTargetPosition)
         this.windowCoveringService
-                    .getCharacteristic(this.hap.Characteristic.TargetPosition)
-                    .setValue(this._currentTargetPosition);
+            .getCharacteristic(this.hap.Characteristic.TargetPosition)
+            .setValue(this.calculatePosition(this._currentTargetPosition));
     }
 
     set holdPosition(value) {
         this._positionHeld = value;
         this.windowCoveringService
-                    .getCharacteristic(this.hap.Characteristic.HoldPosition)
-                    .setValue(this._positionHeld);
+            .getCharacteristic(this.hap.Characteristic.HoldPosition)
+            .setValue(this._positionHeld);
     }
 
     protected getHoldPosition(callback: CharacteristicGetCallback) {

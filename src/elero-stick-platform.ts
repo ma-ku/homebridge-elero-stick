@@ -2,7 +2,6 @@ import {
   AccessoryPlugin, 
   API, 
   HAP, 
-  HAPEncryption, 
   Logging, 
   PlatformConfig, 
   StaticPlatformPlugin,

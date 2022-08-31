@@ -45,9 +45,9 @@ export abstract class EleroAccessory implements AccessoryPlugin {
         this.channel = channel;
 
         this.informationService = new hap.Service.AccessoryInformation()
-          .setCharacteristic(hap.Characteristic.Manufacturer, "Elero")
-          .setCharacteristic(hap.Characteristic.Model, "Channel " + channel)
-          .setCharacteristic(hap.Characteristic.SerialNumber, stick.port + ":" + channel);
+            .setCharacteristic(hap.Characteristic.Manufacturer, "Elero")
+            .setCharacteristic(hap.Characteristic.Model, "Channel " + channel)
+            .setCharacteristic(hap.Characteristic.SerialNumber, stick.port + ":" + channel);
     }
 
     abstract processState(state: number, currentTimestamp: number, defaultUpdateInterval: number, movingUpdateInterval: number): void;

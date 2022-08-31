@@ -1,6 +1,6 @@
 {
   "name": "homebridge-elero-stick",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "displayName": "Elero Remote Control",
   "description": "Elero funkstick for homebridge: https://github.com/ma-ku/homebridge-elero-stick",
   "main": "dist/elero-stick-platform.js",
@@ -15,7 +15,8 @@
   "author": "Mathias Kühn <mathias.kuehn@me.com>",
   "homepage": "https://github.com/ma-ku/homebridge-elero-stick#readme",
   "engines": {
-    "homebridge": ">=1.0.0"
+    "homebridge": ">=1.0.0",
+    "node": ">=12.0.0"
   },
   "keywords": [
     "homebridge",
@@ -41,9 +42,9 @@
   "devDependencies": {
     "@types/node": "10.17.19",
     "@types/serialport": "^8.0.1",
-    "homebridge": "^1.0.4",
+    "homebridge": "^1.5.0",
     "rimraf": "^3.0.2",
-    "typescript": "^3.8.3"
+    "typescript": "^4.4.2"
   },
   "dependencies": {
     "serialport": "^9.0.6"
