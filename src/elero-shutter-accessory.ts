@@ -27,10 +27,6 @@ export class EleroShutterAccessory extends EleroAccessory {
     // Is the cover blocked/jammed?
     protected _jammed: boolean = false;
     
-    // This is a marker if we are moving the shutter ourselves. If not, it might have been
-    // controlled by a local switch and we will not interfere with that manual control
-    protected isMonitoring: boolean = false;
-
     protected _positionHeld: number = 0;
 
     protected _reverse: boolean = false;
@@ -248,7 +244,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         }
 
         if (moving) {
-            this.reportingInterval = this.platformConfig.movingUpdateInterval || 1000;
+            this.reportingInterval = this.platformConfig.movingUpdateInterval || 1500;
             this.isMonitoring = true;
         }
 

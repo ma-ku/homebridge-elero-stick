@@ -15,6 +15,7 @@ import { performance } from 'perf_hooks';
 import { EleroMotorConfig } from './model/elero-motor-config';
 import { EleroPlatformConfig } from './model/elero-platform-config';
 import { EleroConfiguration } from './elero-configuration';
+import { access } from "fs";
 
 const PluginName = "homebridge-elero-stick";
 
@@ -221,16 +222,26 @@ class EleroStickPlatform implements StaticPlatformPlugin {
 
     protected checkChannelStates() {
 
-        var stick = this
+        var stick = this;
 
         if (isNaN(this.updateInterval)) {
-            this.updateInterval = this.defaultUpdateInterval
+            this.updateInterval = this.defaultUpdateInterval;
         }
 
         this.log.debug('checkChannelStates (%s ms)', this.updateInterval);
 
         setTimeout(function() {
-            stick.serialConnection.easyInfo(stick.channelIds)
+            var channels = Array.from(stick.eleroAccessories.values())
+                                .filter( (accessory) => accessory.isMonitoring)
+                                .map( (accessory) => accessory.channel);
+
+            stick.log.debug('checkChannelStates: Monitoring channels ', channels);
+
+            if (channels.length == 0) {
+                channels = stick.channelIds;
+            }
+
+            stick.serialConnection.easyInfo(channels)
             stick.checkChannelStates()
         }, Math.max(500, this.updateInterval))
     }

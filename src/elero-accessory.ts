@@ -27,13 +27,17 @@ export abstract class EleroAccessory implements AccessoryPlugin {
     
     protected readonly informationService: Service;
     
-    reportingInterval: number = 5000;
-
     protected readonly stick: EleroStick;
     readonly channel: number;
 
     readonly platformConfig: EleroConfiguration;
 
+    // This is a marker if we are moving the shutter ourselves. If not, it might have been
+    // controlled by a local switch and we will not interfere with that manual control
+    isMonitoring: boolean = false;
+
+    reportingInterval: number = 5000;
+    
     constructor(hap: HAP, log: Logging, platformConfig: EleroConfiguration, motorConfig: EleroMotorConfig, uuid: string, stick: EleroStick, channel: number) {
       
         this.log = log;
