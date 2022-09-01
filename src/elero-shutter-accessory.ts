@@ -14,7 +14,6 @@ import { EleroAccessory } from './elero-accessory';
 import { performance } from 'perf_hooks';
 import { EleroMotorConfig } from "./model/elero-motor-config";
 import { EleroStick, ELERO_STATES } from "./usb/elero-stick";
-import { EleroPlatformConfig } from "./model/elero-platform-config";
 import { EleroConfiguration } from "./elero-configuration";
 
 export class EleroShutterAccessory extends EleroAccessory {
@@ -115,7 +114,32 @@ export class EleroShutterAccessory extends EleroAccessory {
      * Typical this only ever happens at the pairing process.
      */
     identify(): void {
+
+        let sequence: {(stick: EleroStick, channel: number): number;}[] = [
+            (stick: EleroStick, channel: number): number => { stick.commandStop([channel]); return 250; },
+            (stick: EleroStick, channel: number): number => { stick.commandUp([channel]);   return 1000; },
+            (stick: EleroStick, channel: number): number => { stick.commandDown([channel]); return 1000; },
+            (stick: EleroStick, channel: number): number => { stick.commandUp([channel]);   return 1000; },
+            (stick: EleroStick, channel: number): number => { stick.commandDown([channel]); return 1000; },
+            (stick: EleroStick, channel: number): number => { stick.commandStop([channel]); return 250; }
+        ];
+        
         this.log.info('Identify!');
+        
+        this.runCallback(sequence);
+    }
+
+    protected runCallback(sequence: {(stick: EleroStick, channel: number): number;}[]) {
+
+        let callback = sequence.shift();
+
+        if (callback) {
+            let stick = this.stick;
+            let channel = this.channel;
+            let timeout = callback(stick, channel);
+
+            setTimeout(() => { this.runCallback(sequence) }, timeout);
+        }
     }
 
     protected getName(callback: CharacteristicGetCallback) {
