@@ -14,6 +14,8 @@ import { EleroAccessory } from './elero-accessory';
 import { performance } from 'perf_hooks';
 import { EleroMotorConfig } from "./model/elero-motor-config";
 import { EleroStick, ELERO_STATES } from "./usb/elero-stick";
+import { EleroPlatformConfig } from "./model/elero-platform-config";
+import { EleroConfiguration } from "./elero-configuration";
 
 export class EleroShutterAccessory extends EleroAccessory {
 
@@ -49,12 +51,12 @@ export class EleroShutterAccessory extends EleroAccessory {
     // Needed to avooid duplicate log outputs if nothing changes
     protected _lastInfo: string = '';
 
-    constructor(hap: HAP, log: Logging, config: EleroMotorConfig, uuid: string, stick: EleroStick, channel: number) {
-        super(hap, log, config, uuid, stick, channel);
+    constructor(hap: HAP, log: Logging, platformConfig: EleroConfiguration, motorConfig: EleroMotorConfig, uuid: string, stick: EleroStick, channel: number) {
+        super(hap, log, platformConfig, motorConfig, uuid, stick, channel);
 
-        this._duration = config.duration || 20000;
+        this._duration = motorConfig.duration || 20000;
         this._currentPositionState = hap.Characteristic.PositionState.STOPPED;
-        this._reverse = config.reverse || false;
+        this._reverse = motorConfig.reverse || false;
 
         let service: Service = new hap.Service.WindowCovering(this.displayName);
 
@@ -130,9 +132,25 @@ export class EleroShutterAccessory extends EleroAccessory {
         return ( this._reverse ? 100 - value : value);
     }
 
+    // Provide the outside state info depending on the reverse direction flag
+    protected calculateState(value: number) : number {
+        if (this._reverse) {
+            switch (value) {
+                case this.hap.Characteristic.PositionState.DECREASING:
+                    return this.hap.Characteristic.PositionState.INCREASING;
+                    
+                case this.hap.Characteristic.PositionState.INCREASING:
+                    return this.hap.Characteristic.PositionState.DECREASING;
+            }
+        }
+
+        return value;
+    }
+    
     get isJammed() { return this._jammed; }
 
-    protected getObstructionDetected(callback: CharacteristicGetCallback) {
+    // HomeKit callback: GET ObstructionDetected
+    protected async getObstructionDetected(callback: CharacteristicGetCallback) {
         this.log.debug('[%d][%s] Get ObstructionDetected: %s', this.channel, this.isJammed);
         callback(null, this.isJammed);
     }
@@ -140,6 +158,7 @@ export class EleroShutterAccessory extends EleroAccessory {
     get holdPosition(): number { return this._positionHeld; }
     get currentPositionState() { return this._currentPositionState; }
     
+    // HomeKit callback: GET PositionState
     protected getPositionState(callback: CharacteristicGetCallback): void {
         var state = this.currentPositionState;
 
@@ -159,53 +178,61 @@ export class EleroShutterAccessory extends EleroAccessory {
         callback(null, state);
     }
 
-    get lastPosition() { return this._lastPosition; }
+    get lastPosition() : number { 
+        return this._lastPosition; 
+    }
     
     protected updateLastPosition(value: number): void {
-        // TODO: Reflect reverse movement
         if (value >= 0 && value <= 100) {
             this._lastPosition = value;
 
-            this.log.debug("[%d][%s] Updating lastPosition: %d", this.channel, this.name, this._lastPosition);
+            let hkValue = this.calculatePosition(this._lastPosition);
+            this.log.debug("[%d][%s] Updating lastPosition: %d", this.channel, this.name, hkValue);
             this.windowCoveringService
                 .getCharacteristic(this.hap.Characteristic.CurrentPosition)
-                .updateValue(this.calculatePosition(this._lastPosition));
+                .updateValue(hkValue);
         }
         else {
             this.log.error("[%d][%s] Updating lastPosition with illegal value: %d: ", this.channel, this.name, value);
         }
     }
     
-    get currentTargetPosition() { return this._currentTargetPosition; }
+    get currentTargetPosition() : number { 
+        return this._currentTargetPosition; 
+    }
 
     protected updateTargetPosition(value: number): void {
         if (value >= 0 && value <= 100) {
             this._currentTargetPosition = value;
 
-            this.log.debug("[%d] Updating currentTargetPosition: %d", this.channel, this._currentTargetPosition)
+            let hkValue = this.calculatePosition(this._currentTargetPosition);
+            this.log.debug("[%d] Updating currentTargetPosition: %d", this.channel, hkValue);
             this.windowCoveringService
                 .getCharacteristic(this.hap.Characteristic.TargetPosition)
-                .updateValue(this.calculatePosition(this._currentTargetPosition));
+                .updateValue(hkValue);
         }
         else {
             this.log.error("[%d][%s] Updating currentTargetPosition with illegal value: %d: ", this.channel, this.name, value);
         }
     }
 
-    protected getTargetPosition(callback: CharacteristicGetCallback) {
-        this.log.debug('[%d] Requested TargetPosition: %s', this.channel, this.currentTargetPosition);
-        callback(null, this.calculatePosition(this.currentTargetPosition));
+    // HomeKit callback: GET TargetPosition
+    protected async getTargetPosition(callback: CharacteristicGetCallback) {
+        let hkValue = this.calculatePosition(this._currentTargetPosition);
+        this.log.debug('[%d] Requested TargetPosition: %s', this.channel, hkValue);
+        callback(null, hkValue);
     }
 
-    protected setTargetPosition(pos: CharacteristicValue, callback: CharacteristicSetCallback) {
-        // TODO: Reflect reverse movement
+    // HomeKit callback: SET TargetPosition
+    protected async setTargetPosition(pos: CharacteristicValue, callback: CharacteristicSetCallback) {
+
         this.log.debug('[%d] Set TargetPosition: %d', this.channel, pos);
         this._currentTargetPosition = this.calculatePosition(pos as number);
-        this._positionHeld = 0
+        this._positionHeld = 0;
 
         var moving = false;
 
-        if ((pos < this._lastPosition) || (pos <= 10)) {
+        if ((this._currentTargetPosition < this._lastPosition) || (this._currentTargetPosition < 5)) {
             this.stick.commandDown([this.channel]);
             moving = true;
         }
@@ -215,55 +242,63 @@ export class EleroShutterAccessory extends EleroAccessory {
         // else if (pos <= 75) {
         //     this.stick.serialConnection.commandVentilationPosition([this.channel])
         // }
-        else if ((pos > this._lastPosition) || (pos >= 10)) {
+        else if ((this._currentTargetPosition > this._lastPosition) || (this._currentTargetPosition > 5)) {
             this.stick.commandUp([this.channel]);
             moving = true;
         }
 
         if (moving) {
-            this.reportingInterval = 1500; // TODO: How to get these values here: movingUpdateInterval
-            this.isMonitoring = true    
+            this.reportingInterval = this.platformConfig.movingUpdateInterval || 1000;
+            this.isMonitoring = true;
         }
 
         callback(null);
     }
 
     protected updatePositionState(value: number): void {
-        this._currentPositionState = value
+        this._currentPositionState = value;
 
-        this.log.debug("[%d] Updating currentPositionState: %d", this.channel, this._currentPositionState)
+        let hkValue = this.calculateState(this._currentPositionState);
+        this.log.debug("[%d] Updating currentPositionState: %d", this.channel, hkValue);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.PositionState)
-            .updateValue(this.calculatePosition(this._currentPositionState));
+            .updateValue(hkValue);
     }
 
-    set lastPosition(value) {
+    set lastPosition(value: number) {
         this._lastPosition = value;
-        this.log.debug("[%d] Setting lastPosition: ", this.channel, this._lastPosition)
+
+        let hkValue = this.calculatePosition(this._lastPosition);
+        this.log.debug("[%d] Setting lastPosition: ", this.channel, hkValue);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.CurrentPosition)
-            .setValue(this.calculatePosition(this._lastPosition));
+            .setValue(hkValue);
     }
 
     set currentPositionState(value) {
         this._currentPositionState = value;
-        this.log.debug("[%d] Setting currentPositionState: %d", this.channel, this._currentPositionState)
+
+        let hkValue = this.calculateState(this._currentPositionState);
+        this.log.debug("[%d] Setting currentPositionState: %d", this.channel, hkValue);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.PositionState)
-            .setValue(this._currentPositionState);
+            .setValue(hkValue);
     }
 
-    protected getCurrentPosition(callback:CharacteristicGetCallback) {
-        this.log.debug('[%d] Requested CurrentPosition: %s', this.channel, this.lastPosition);
-        callback(null, this.calculatePosition(this.lastPosition));
+    // HomeKit callback: GET CurrentPosition
+    protected async getCurrentPosition(callback:CharacteristicGetCallback) {
+        let hkValue = this.calculatePosition(this.lastPosition);
+        this.log.debug('[%d] Requested CurrentPosition: %s', this.channel, hkValue);
+        callback(null, hkValue);
     }
 
     set currentTargetPosition(value) {
         this._currentTargetPosition = value;
-        this.log.debug("[%d] Setting currentTargetPosition: ", this.channel, this._currentTargetPosition)
+        let hkValue = this.calculatePosition(this._currentTargetPosition);
+        this.log.debug("[%d] Setting currentTargetPosition: ", this.channel, hkValue);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.TargetPosition)
-            .setValue(this.calculatePosition(this._currentTargetPosition));
+            .setValue(hkValue);
     }
 
     set holdPosition(value) {
@@ -273,13 +308,15 @@ export class EleroShutterAccessory extends EleroAccessory {
             .setValue(this._positionHeld);
     }
 
-    protected getHoldPosition(callback: CharacteristicGetCallback) {
+    // HomeKit callback: GET HoldPosition
+    protected async getHoldPosition(callback: CharacteristicGetCallback) {
         this.log.debug('[%d] Requested HoldPosition: %s', this.channel, this._positionHeld);
         callback(null, this._positionHeld);
     }
 
-    protected setHoldPosition(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-        this.log.debug('[%d] Set HoldPosition: ', this.channel, value);
+    // HomeKit callback: SET HoldPosition
+    protected async setHoldPosition(value: CharacteristicValue, callback: CharacteristicSetCallback) {
+        this.log.debug('[%d] Set HoldPosition: %d', this.channel, value);
 
         if (value == 1) {
             this.stick.commandStop([this.channel]);
@@ -291,71 +328,74 @@ export class EleroShutterAccessory extends EleroAccessory {
     }
 
 
-    processState(state: number, currentTimestamp: number, defaultUpdateInterval: number, movingUpdateInterval: number): void {
+    processState(state: number, currentTimestamp: number): void {
 
-        var newState = this.hap.Characteristic.PositionState.STOPPED
-        var newPosition = this._lastPosition
-        var newTargetPosition = this._currentTargetPosition
+        var newState = this.hap.Characteristic.PositionState.STOPPED;
+        var newPosition = this._lastPosition;
+        var newTargetPosition = this._currentTargetPosition;
 
-        var newInterval = this.reportingInterval || defaultUpdateInterval
+        var newInterval = this.reportingInterval || this.platformConfig.defaultUpdateInterval;
 
-        this._jammed = false
+        this._jammed = false;
 
         if (this._currentPositionState != this.hap.Characteristic.PositionState.STOPPED) {
             // We are moving so figure out the elapsed time
             // and adjust the lastPosition accordingly.
 
-            var direction = 1
-            var check = (position: number, targetPosition: number) => { return (position >= targetPosition); }
+            var direction = 1;
+            var check = (position: number, targetPosition: number) => { return (position >= targetPosition); };
 
             if (this._currentPositionState == this.hap.Characteristic.PositionState.DECREASING) {
-                direction = -1
-                check = (position, targetPosition) => { return (position <= targetPosition); }
+                direction = -1;
+                check = (position, targetPosition) => { return (position <= targetPosition); };
             }
 
             if (!this.isMonitoring) {
                 // We will not interrupt
-                check = (position, targetPosition) => { return false; }
+                check = (position, targetPosition) => { return false; };
             }
 
-            var elapsed = (currentTimestamp - this._lastStatusTimestamp)
+            var elapsed = (currentTimestamp - this._lastStatusTimestamp);
 
-            if (elapsed >= 1) {
+            if (elapsed > 0) {
 
                 if (this._duration > 0) {
-                    var delta = Math.max(0, 100 * elapsed / this._duration)
-                    var newPosition = Math.min(100, Math.max(0, this._lastPosition + direction * delta))
-                    this.updateLastPosition(newPosition)
+                    var delta = Math.max(0, 100 * elapsed / this._duration);
+                    var newPosition = Math.min(100, Math.max(0, this._lastPosition + direction * delta));
+                    this.updateLastPosition(newPosition);
 
                     // If we are driving to an intermediate position, we need to stop 
                     // ourselves. For fully opened or closed, we will wait until TOP_POS 
                     // or BOTTOM_POS is reported.
                     if ((this._currentTargetPosition > 0) && (this._currentTargetPosition < 100)) {
-                        if (check(newPosition, this._currentTargetPosition)) {
-                            this.stick.commandStop([this.channel])
+                        let result = check(newPosition, this._currentTargetPosition);
+                        this.log.info('Checking channel %s every %s ms. Now at %d, moving to %d. Check result is %s', this.channel, this.reportingInterval, newPosition, this._currentTargetPosition, result);
+
+                        if (result) {
+                            this.stick.commandStop([this.channel]);
                         }    
                     }
                 }
 
-                this._lastStatusTimestamp = currentTimestamp
+                this._lastStatusTimestamp = currentTimestamp;
             }
         }
         
         if (state == ELERO_STATES.BOTTOM_POS_STOP) {
-            newState = this.hap.Characteristic.PositionState.STOPPED
-            newPosition = 0
-            newTargetPosition = 0
-            newInterval = defaultUpdateInterval
+            newState = this.hap.Characteristic.PositionState.STOPPED;
+            newPosition = 0;
+            newTargetPosition = 0;
+            newInterval = this.platformConfig.defaultUpdateInterval;
 
-            this.isMonitoring = false
+            this.isMonitoring = false;
         }
         else if (state == ELERO_STATES.TOP_POS_STOP) {
-            newState = this.hap.Characteristic.PositionState.STOPPED
-            newPosition = 100
-            newTargetPosition = 100
-            newInterval = defaultUpdateInterval
+            newState = this.hap.Characteristic.PositionState.STOPPED;
+            newPosition = 100;
+            newTargetPosition = 100;
+            newInterval = this.platformConfig.defaultUpdateInterval;
 
-            this.isMonitoring = false
+            this.isMonitoring = false;
         }
         // Not supported/tested for now, might be verified later with
         // the right motor available?!
@@ -373,51 +413,50 @@ export class EleroShutterAccessory extends EleroAccessory {
         //     newInterval = this.stick.defaultUpdateInterval
         // }
         else if (state == ELERO_STATES.MOVING_DOWN) {
-            newState = this.hap.Characteristic.PositionState.DECREASING
-            newInterval = movingUpdateInterval
+            newState = this.hap.Characteristic.PositionState.DECREASING;
+            newInterval = this.platformConfig.movingUpdateInterval;
         }
         else if (state == ELERO_STATES.MOVING_UP) {
-            newState = this.hap.Characteristic.PositionState.INCREASING
-            newInterval = movingUpdateInterval
+            newState = this.hap.Characteristic.PositionState.INCREASING;
+            newInterval = this.platformConfig.movingUpdateInterval;
         }
         else if (state == ELERO_STATES.START_MOVE_DOWN) {
-            newState = this.hap.Characteristic.PositionState.DECREASING
-            newInterval = movingUpdateInterval
+            newState = this.hap.Characteristic.PositionState.DECREASING;
+            newInterval = this.platformConfig.movingUpdateInterval;
         }
         else if (state == ELERO_STATES.START_MOVE_UP) {
-            newState = this.hap.Characteristic.PositionState.INCREASING
-            newInterval = movingUpdateInterval
+            newState = this.hap.Characteristic.PositionState.INCREASING;
+            newInterval = this.platformConfig.movingUpdateInterval;
         }
         else if (state == ELERO_STATES.BLOCKING) {
-            newState = this.hap.Characteristic.PositionState.STOPPED
-            newInterval = defaultUpdateInterval
+            newState = this.hap.Characteristic.PositionState.STOPPED;
+            newInterval = this.platformConfig.defaultUpdateInterval;
 
-            this._jammed = true
-            this.isMonitoring = false
+            this._jammed = true;
+            this.isMonitoring = false;
         }
         else if (state == ELERO_STATES.OVERHEATED) {
-            newState = this.hap.Characteristic.PositionState.STOPPED
-            newInterval = defaultUpdateInterval
+            newState = this.hap.Characteristic.PositionState.STOPPED;
+            newInterval = this.platformConfig.defaultUpdateInterval;
             
-            this._jammed = true
-            this.isMonitoring = false
+            this._jammed = true;
+            this.isMonitoring = false;
         }
         else if (state == ELERO_STATES.STOP_UNDEFINED_POS) {
-            newState = this.hap.Characteristic.PositionState.STOPPED
-            newInterval = defaultUpdateInterval
+            newState = this.hap.Characteristic.PositionState.STOPPED;
+            newInterval = this.platformConfig.defaultUpdateInterval;
 
-            newTargetPosition = this.lastPosition
-
-            this.isMonitoring = false
+            newTargetPosition = this.lastPosition;
+            this.isMonitoring = false;
         }
 
-        this._lastStatusTimestamp = currentTimestamp
+        this._lastStatusTimestamp = currentTimestamp;
 
-        this.updateTargetPosition(newTargetPosition)
-        this.updateLastPosition(newPosition)
-        this.updatePositionState(newState)
-        this.lastPosition = newPosition
-        this.positionState = newState
+        this.updateTargetPosition(newTargetPosition);
+        this.updateLastPosition(newPosition);
+        this.updatePositionState(newState);
+        this.lastPosition = newPosition;
+        this.positionState = newState;
 
         this.log.debug('Updating reportingInterval for channel %s to %s', this.channel, this.reportingInterval);
 
@@ -426,17 +465,13 @@ export class EleroShutterAccessory extends EleroAccessory {
         this.logInfo();
     }
 
-    protected amendedPosition(position: number): number {
-        return (this._reverse ? 100 - position : position);
-    }
-
     protected logInfo() {
 
         var info = " STOPPED [";
-        if (this.currentPositionState == this.hap.Characteristic.PositionState.DECREASING) {
+        if (this.calculateState(this.currentPositionState) == this.hap.Characteristic.PositionState.DECREASING) {
             info = " CLOSING [";
         } 
-        else if (this.currentPositionState == this.hap.Characteristic.PositionState.INCREASING) {
+        else if (this.calculateState(this.currentPositionState) == this.hap.Characteristic.PositionState.INCREASING) {
             info = " OPENING [";
         }
 
@@ -445,7 +480,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         }
 
         // We build the string first and only emit a log entry if that entry has changed
-        info = "[" + this.channel + "] " + this.name + info + this._lastPosition + "]";
+        info = "[" + this.channel + "] " + this.name + info + this.calculatePosition(this._lastPosition) + "]";
 
         if (info != this._lastInfo) {
             this.log.info(info);

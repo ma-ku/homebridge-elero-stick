@@ -11,10 +11,10 @@ import {
 import { EleroAccessory } from "./elero-accessory";
 import { EleroShutterAccessory } from "./elero-shutter-accessory";
 import { EleroStick, ELERO_STATES } from "./usb/elero-stick";
-import { PerformanceObserver, performance } from 'perf_hooks';
+import { performance } from 'perf_hooks';
 import { EleroMotorConfig } from './model/elero-motor-config';
 import { EleroPlatformConfig } from './model/elero-platform-config';
-import { access } from "fs";
+import { EleroConfiguration } from './elero-configuration';
 
 const PluginName = "homebridge-elero-stick";
 
@@ -44,13 +44,15 @@ class EleroStickPlatform implements StaticPlatformPlugin {
 
     private config: EleroPlatformConfig;
 
+    private platformConfig: EleroConfiguration;
+
     private eleroAccessories: Map<string, EleroAccessory> = new Map<string, EleroAccessory>();
     private channelIds: number[] = [];
 
-    private defaultUpdateInterval: number = 5000;
-    private movingUpdateInterval: number = 1500;
+    defaultUpdateInterval: number = 5000;
+    movingUpdateInterval: number = 1500;
 
-    private updateInterval: number = 5000;
+    protected updateInterval: number = 5000;
 
     private lastStatusTimestamp: number;
 
@@ -72,9 +74,14 @@ class EleroStickPlatform implements StaticPlatformPlugin {
 
         // We will request an update from the stick every 5 seconds
         this.defaultUpdateInterval = this.config.updateInterval || 5000;
-        this.movingUpdateInterval =  this.config.movingUpdateInterval || 1500;
+        this.movingUpdateInterval = this.config.movingUpdateInterval || 1500;
 
         this.updateInterval = this.defaultUpdateInterval;
+
+        this.platformConfig = <EleroConfiguration> {
+            defaultUpdateInterval: this.defaultUpdateInterval,
+            movingUpdateInterval: this.movingUpdateInterval
+        };
 
         this.lastStatusTimestamp = performance.now()
 
@@ -90,20 +97,20 @@ class EleroStickPlatform implements StaticPlatformPlugin {
 
             this.api.on('didFinishLaunching', () => {
 
-                            this.log.info("Requesting learned channels from stick")
+                    this.log.info("Requesting learned channels from stick")
 
-                            this.serialConnection.on('connect', (channels: number[]) => {
-                                this.registerChannels(channels);
-                            })
-                    
-                            this.serialConnection.on('status', (channel: number, state: number) => {
-                                stick.processState(channel, state);
-                            })
-                    
-                            this.serialConnection.easyCheck();
+                    this.serialConnection.on('connect', (channels: number[]) => {
+                        this.registerChannels(channels);
+                    })
+            
+                    this.serialConnection.on('status', (channel: number, state: number) => {
+                        stick.processState(channel, state);
+                    })
+            
+                    this.serialConnection.easyCheck();
 
-                            this.checkChannelStates();
-                        });
+                    this.checkChannelStates();
+                });
         }
     }
 
@@ -192,7 +199,7 @@ class EleroStickPlatform implements StaticPlatformPlugin {
 
         this.eleroAccessories.forEach( accessory => {
             if (accessory.channel == channel) {
-                accessory.processState(state, newTimestamp, this.defaultUpdateInterval, this.movingUpdateInterval);
+                accessory.processState(state, newTimestamp);
             }
         });
 
@@ -261,13 +268,16 @@ class EleroStickPlatform implements StaticPlatformPlugin {
                                                                                     };
 
             // If this accessory is new, we will create a new instance
-
-            var accessory: EleroAccessory;
+            var accessory: EleroAccessory | undefined = undefined;
 
             switch (channelConfig.type) {
             case 'shades':
             case 'shutter':
-                accessory = new EleroShutterAccessory(this.api.hap, this.log, channelConfig, uuid, this.serialConnection, channel);
+                accessory = new EleroShutterAccessory(this.api.hap, this.log, this.platformConfig, channelConfig, uuid, this.serialConnection, channel);
+                break;
+
+            default:
+                stick.log.error("Cannot creste accessory of type '%s' for channel: %s", channelConfig.type, channel);
             }
 
             if (accessory) {

@@ -8,8 +8,9 @@ import {
     Service,
     CharacteristicEventTypes
 } from "homebridge";
+import { platform } from "os";
+import { EleroConfiguration } from "./elero-configuration";
 
-import { PerformanceObserver, performance } from 'perf_hooks';
 import { EleroMotorConfig } from './model/elero-motor-config';
 import { EleroStick, ELERO_STATES } from './usb/elero-stick';
 
@@ -31,13 +32,17 @@ export abstract class EleroAccessory implements AccessoryPlugin {
     protected readonly stick: EleroStick;
     readonly channel: number;
 
-    constructor(hap: HAP, log: Logging, config: EleroMotorConfig, uuid: string, stick: EleroStick, channel: number) {
+    readonly platformConfig: EleroConfiguration;
+
+    constructor(hap: HAP, log: Logging, platformConfig: EleroConfiguration, motorConfig: EleroMotorConfig, uuid: string, stick: EleroStick, channel: number) {
       
         this.log = log;
         this.hap = hap;
-
-        this.name = config.name;
-        this.displayName = config.displayName || config.name;
+        
+        this.platformConfig = platformConfig;
+        
+        this.name = motorConfig.name;
+        this.displayName = motorConfig.displayName || motorConfig.name;
         
         this.uuid = uuid;
 
@@ -50,7 +55,7 @@ export abstract class EleroAccessory implements AccessoryPlugin {
             .setCharacteristic(hap.Characteristic.SerialNumber, stick.port + ":" + channel);
     }
 
-    abstract processState(state: number, currentTimestamp: number, defaultUpdateInterval: number, movingUpdateInterval: number): void;
+    abstract processState(state: number, currentTimestamp: number): void;
 
     abstract getServices(): Service[];
 }
