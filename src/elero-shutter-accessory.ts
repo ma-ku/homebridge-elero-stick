@@ -357,15 +357,32 @@ export class EleroShutterAccessory extends EleroAccessory {
         var newInterval = this.reportingInterval || this.platformConfig.defaultUpdateInterval;
 
         this._jammed = false;
+              
+        var actualMotorState = this.hap.Characteristic.PositionState.STOPPED;
 
-        if (this._currentPositionState != this.hap.Characteristic.PositionState.STOPPED) {
+        switch (state) {
+        case ELERO_STATES.MOVING_DOWN:
+        case ELERO_STATES.START_MOVE_DOWN:
+            actualMotorState = this.hap.Characteristic.PositionState.DECREASING;
+            break;
+
+        case ELERO_STATES.MOVING_UP:
+        case ELERO_STATES.START_MOVE_UP:
+            actualMotorState = this.hap.Characteristic.PositionState.INCREASING;
+            break;
+    
+        default:
+            actualMotorState = this.hap.Characteristic.PositionState.STOPPED;
+        }
+
+        if (actualMotorState != this.hap.Characteristic.PositionState.STOPPED) {
             // We are moving so figure out the elapsed time
             // and adjust the lastPosition accordingly.
 
             var direction = 1;
             var check = (position: number, targetPosition: number) => { return (position >= targetPosition); };
 
-            if (this._currentPositionState == this.hap.Characteristic.PositionState.DECREASING) {
+            if (actualMotorState == this.hap.Characteristic.PositionState.DECREASING) {
                 direction = -1;
                 check = (position, targetPosition) => { return (position <= targetPosition); };
             }
@@ -376,6 +393,8 @@ export class EleroShutterAccessory extends EleroAccessory {
             }
 
             var elapsed = (currentTimestamp - this._lastStatusTimestamp);
+
+            this.updatePositionState(actualMotorState);
 
             if (elapsed > 0) {
 

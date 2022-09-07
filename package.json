@@ -23,6 +23,7 @@
     "homebridge-plugin",
     "home-automation",
     "elero",
+    "weinor",
     "roltop",
     "suntop"
   ],

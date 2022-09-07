@@ -230,19 +230,10 @@ class EleroStickPlatform implements StaticPlatformPlugin {
 
         this.log.debug('checkChannelStates (%s ms)', this.updateInterval);
 
+        stick.serialConnection.easyInfo(stick.channelIds);
+
         setTimeout(function() {
-            var channels = Array.from(stick.eleroAccessories.values())
-                                .filter( (accessory) => accessory.isMonitoring)
-                                .map( (accessory) => accessory.channel);
-
-            stick.log.debug('checkChannelStates: Monitoring channels ', channels);
-
-            if (channels.length == 0) {
-                channels = stick.channelIds;
-            }
-
-            stick.serialConnection.easyInfo(channels)
-            stick.checkChannelStates()
+            stick.checkChannelStates();
         }, Math.max(500, this.updateInterval))
     }
 
@@ -284,6 +275,8 @@ class EleroStickPlatform implements StaticPlatformPlugin {
             switch (channelConfig.type) {
             case 'shades':
             case 'shutter':
+            case 'lights':
+            case 'heating':
                 accessory = new EleroShutterAccessory(this.api.hap, this.log, this.platformConfig, channelConfig, uuid, this.serialConnection, channel);
                 break;
 

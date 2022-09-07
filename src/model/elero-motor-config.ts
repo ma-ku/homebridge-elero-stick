@@ -1,7 +1,7 @@
 
 export interface EleroMotorConfig {
 
-    type: 'shutter'|'shades';
+    type: 'shutter'|'shades'|'lights'|'heating';
 
     channel: number;
 

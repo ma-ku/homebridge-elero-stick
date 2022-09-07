@@ -104,9 +104,7 @@ export class EleroStick extends EventEmitter {
         return sum & 0xff;
     }
 
-    private sendCommand(command: number[], urgent?: boolean): void {
-
-        urgent = urgent || false;
+    private sendCommand(command: number[], urgent: boolean = false): void {
 
         if (this.connectionBusy) {
             if (urgent == true) {
@@ -124,8 +122,7 @@ export class EleroStick extends EventEmitter {
 
     private send(data: number[]): void {
 
-        var msg = data; // new Uint8Array(data.length + 1);
-        // msg.set(data);
+        var msg = data; 
 
         // Compute checksum byte for the message
         var checksum = this.checksum(data);
@@ -134,7 +131,7 @@ export class EleroStick extends EventEmitter {
 
         this.serial.write(msg, (err) => {
           if (err) {
-                this.connectionBusy = false
+                this.connectionBusy = false;
                 if (this.log) this.log.error('Error on write: ', err.message);
                 return 
           }
@@ -143,16 +140,16 @@ export class EleroStick extends EventEmitter {
         var stick = this
         setTimeout( () => {
             stick.sendNext()
-        }, 4000)
+        }, 500)
     }
 
     private sendNext(): void {
-        var command = this.commandQueue.shift()
-        if (command !== undefined) {
-            this.send(command)
+        var command = this.commandQueue.shift();
+        if (command) {
+            this.send(command);
         }
         else {
-            this.connectionBusy = false
+            this.connectionBusy = false;
         }
     }
 
