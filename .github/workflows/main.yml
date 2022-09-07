@@ -5,7 +5,7 @@ name: Deploy to npmjs.com
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the "develop" branch
-  pull_request:
+  push:
     branches: [ "release" ]
 
   # Allows you to run this workflow manually from the Actions tab
