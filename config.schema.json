@@ -53,7 +53,13 @@
                         "type": {
                             "title": "Type",
                             "type": "string",
-                            "required": true
+                            "required": true,
+														"enum": [
+															"shutter",
+															"shades",
+															"lights",
+															"heating"
+														 ]
 												},
 												"reverse": {
                             "title": "Reverse direction",
