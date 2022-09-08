@@ -120,7 +120,14 @@ export class EleroStick extends EventEmitter {
         }
     }
 
+    private _currentTimer: NodeJS.Timeout | undefined = undefined;
+
     private send(data: number[]): void {
+
+        if (this._currentTimer) {
+            clearTimeout(this._currentTimer);
+            this._currentTimer = undefined;
+        }
 
         var msg = data; 
 
@@ -131,16 +138,16 @@ export class EleroStick extends EventEmitter {
 
         this.serial.write(msg, (err) => {
           if (err) {
-                this.connectionBusy = false;
-                if (this.log) this.log.error('Error on write: ', err.message);
+            this.connectionBusy = false;
+            if (this.log) this.log.error('Error on write: ', err.message);
                 return 
           }
         });
 
         var stick = this
-        setTimeout( () => {
+        this._currentTimer = setTimeout( () => {
             stick.sendNext()
-        }, 500)
+        }, 250);
     }
 
     private sendNext(): void {
