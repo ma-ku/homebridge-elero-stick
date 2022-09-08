@@ -92,21 +92,9 @@ export class EleroShutterAccessory extends EleroAccessory {
 
         this.windowCoveringService = service;
 
+        this.services.push(service);
+
         log.info("Elero shutter accessory for channel '%s' created!", channel);
-    }
-
-    /**
-     * This method is called directly after creation of this instance.
-     * It should return all services which should be added to the accessory.
-     */
-    getServices(): Service[] {
-        
-        this.log.debug("Returning services");
-
-        return [
-            this.informationService,
-            this.windowCoveringService,
-        ];
     }
 
     /**
@@ -408,7 +396,7 @@ export class EleroShutterAccessory extends EleroAccessory {
                     // or BOTTOM_POS is reported.
                     if ((this._currentTargetPosition > 0) && (this._currentTargetPosition < 100)) {
                         let result = check(newPosition, this._currentTargetPosition);
-                        this.log.info('Checking channel %s every %s ms. Now at %d, moving to %d. Check result is %s', this.channel, this.reportingInterval, newPosition, this._currentTargetPosition, result);
+                        this.log.debug('Checking channel %s every %s ms. Now at %d, moving to %d. Check result is %s', this.channel, this.reportingInterval, newPosition, this._currentTargetPosition, result);
 
                         if (result) {
                             this.stick.commandStop([this.channel]);
