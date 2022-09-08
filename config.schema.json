@@ -2,8 +2,7 @@
 	"pluginAlias": "EleroStick",
 	"pluginType": "platform",
 	"singular": false,
-	"headerDisplay": "Optional content to display above the plugin config. Supports markdown.",
-  	"footerDisplay": "Optional content to display below the plugin config. Supports markdown.",
+	"headerDisplay": "Define connection with ELERO USB Stick and motor configs per channel.",
 	
 	"schema": {
 		"type": "object",
@@ -24,57 +23,65 @@
 				"title": "Polling time (ms)",
 				"type": "integer",
 				"required": false,
-				"default": "5000"
+				"default": 5000,
+				"minimum": 1000
 			},
 			"movingUpdateInterval": {
 				"title": "Polling time while moving (ms)",
 				"type": "integer",
 				"required": false,
-				"default": "1500"
+				"default": 1500,
+				"minimum": 500
 			},
-			
-            "motors": {
-                "title": "Motors",
-                "type": "array",
-                "items": {
-                    "title": "Motor",
-                    "type": "object",
-                    "properties": {
-                        "channel": {
-                            "title": "Channel",
-                            "type": "integer",
-                            "required": true
-                        },
-                        "name": {
-                            "title": "Name",
-                            "type": "string",
-                            "required": true
-                        },
-                        "type": {
-                            "title": "Type",
-                            "type": "string",
-                            "required": true,
-														"enum": [
-															"shutter",
-															"shades",
-															"lights",
-															"heating"
-														 ]
-												},
-												"reverse": {
-                            "title": "Reverse direction",
-                            "type": "boolean",
-                            "required": false
-                        },
-                        "duration": {
-                            "title": "Opening time (ms)",
-                            "type": "integer",
-                            "required": true,
-                            "default": 24000
-                        }
-                    }
-                }
-            }
+			"motors": {
+				"title": "Motors",
+				"type": "array",
+				"items": {
+					"title": "Motor",
+					"type": "object",
+					"properties": {
+						"channel": {
+							"title": "Channel",
+							"type": "integer",
+							"required": true
+						},
+						"name": {
+							"title": "Name",
+							"type": "string",
+							"required": true
+						},
+						"type": {
+							"title": "Type",
+							"type": "string",
+							"required": true,
+							"enum": [
+								"shutter",
+								"shades",
+								"lights",
+								"heating"
+							]
+						},
+						"reverse": {
+							"title": "Reverse direction",
+							"type": "boolean",
+							"required": false
+						},
+						"duration": {
+							"title": "Opening time (ms)",
+							"type": "integer",
+							"required": true,
+							"default": 24000,
+							"minimum": 1000
+						},
+						"startDelay": {
+							"title": "Delay before motor moves",
+							"type": "integer",
+							"required": false,
+							"minimum": 0
+						}
+					}
+				}
+			}
 		}
 	}
 }

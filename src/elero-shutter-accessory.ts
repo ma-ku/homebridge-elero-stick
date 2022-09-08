@@ -23,6 +23,9 @@ export class EleroShutterAccessory extends EleroAccessory {
     // Time of the shutter to move from 0 to 100
     protected _duration: number;
     
+    // Time before the shutter actually moves at full speed
+    protected _startDelay: number = 0;
+
     // Is the cover blocked/jammed?
     protected _jammed: boolean = false;
     
@@ -50,6 +53,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         super(hap, log, platformConfig, motorConfig, uuid, stick, channel);
 
         this._duration = motorConfig.duration || 20000;
+        this._startDelay = motorConfig.startDelay || 0;
         this._currentPositionState = hap.Characteristic.PositionState.STOPPED;
         this._reverse = motorConfig.reverse || false;
 
@@ -92,21 +96,9 @@ export class EleroShutterAccessory extends EleroAccessory {
 
         this.windowCoveringService = service;
 
+        this.services.push(service);
+
         log.info("Elero shutter accessory for channel '%s' created!", channel);
-    }
-
-    /**
-     * This method is called directly after creation of this instance.
-     * It should return all services which should be added to the accessory.
-     */
-    getServices(): Service[] {
-        
-        this.log.debug("Returning services");
-
-        return [
-            this.informationService,
-            this.windowCoveringService,
-        ];
     }
 
     /**
@@ -408,7 +400,7 @@ export class EleroShutterAccessory extends EleroAccessory {
                     // or BOTTOM_POS is reported.
                     if ((this._currentTargetPosition > 0) && (this._currentTargetPosition < 100)) {
                         let result = check(newPosition, this._currentTargetPosition);
-                        this.log.info('Checking channel %s every %s ms. Now at %d, moving to %d. Check result is %s', this.channel, this.reportingInterval, newPosition, this._currentTargetPosition, result);
+                        this.log.debug('Checking channel %s every %s ms. Now at %d, moving to %d. Check result is %s', this.channel, this.reportingInterval, newPosition, this._currentTargetPosition, result);
 
                         if (result) {
                             this.stick.commandStop([this.channel]);
@@ -462,10 +454,12 @@ export class EleroShutterAccessory extends EleroAccessory {
         else if (state == ELERO_STATES.START_MOVE_DOWN) {
             newState = this.hap.Characteristic.PositionState.DECREASING;
             newInterval = this.platformConfig.movingUpdateInterval;
+            this._lastStatusTimestamp = currentTimestamp + this._startDelay;
         }
         else if (state == ELERO_STATES.START_MOVE_UP) {
             newState = this.hap.Characteristic.PositionState.INCREASING;
             newInterval = this.platformConfig.movingUpdateInterval;
+            this._lastStatusTimestamp = currentTimestamp + this._startDelay;
         }
         else if (state == ELERO_STATES.BLOCKING) {
             newState = this.hap.Characteristic.PositionState.STOPPED;

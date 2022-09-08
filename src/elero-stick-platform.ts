@@ -4,8 +4,7 @@ import {
   HAP, 
   Logging, 
   PlatformConfig, 
-  StaticPlatformPlugin,
-  PlatformAccessory
+  StaticPlatformPlugin
 } from "homebridge";
 
 import { EleroAccessory } from "./elero-accessory";
@@ -15,7 +14,6 @@ import { performance } from 'perf_hooks';
 import { EleroMotorConfig } from './model/elero-motor-config';
 import { EleroPlatformConfig } from './model/elero-platform-config';
 import { EleroConfiguration } from './elero-configuration';
-import { access } from "fs";
 
 const PluginName = "homebridge-elero-stick";
 

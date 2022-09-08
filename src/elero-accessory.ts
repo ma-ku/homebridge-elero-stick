@@ -1,18 +1,14 @@
 import {
     AccessoryPlugin,
-    CharacteristicGetCallback,
-    CharacteristicSetCallback,
-    CharacteristicValue,
     HAP,
     Logging,
     Service,
-    CharacteristicEventTypes
 } from "homebridge";
-import { platform } from "os";
+
 import { EleroConfiguration } from "./elero-configuration";
 
 import { EleroMotorConfig } from './model/elero-motor-config';
-import { EleroStick, ELERO_STATES } from './usb/elero-stick';
+import { EleroStick } from './usb/elero-stick';
 
 export abstract class EleroAccessory implements AccessoryPlugin {
 
@@ -31,6 +27,8 @@ export abstract class EleroAccessory implements AccessoryPlugin {
     readonly channel: number;
 
     readonly platformConfig: EleroConfiguration;
+
+    protected services: Service[] = [];
 
     // This is a marker if we are moving the shutter ourselves. If not, it might have been
     // controlled by a local switch and we will not interfere with that manual control
@@ -57,9 +55,17 @@ export abstract class EleroAccessory implements AccessoryPlugin {
             .setCharacteristic(hap.Characteristic.Manufacturer, "Elero")
             .setCharacteristic(hap.Characteristic.Model, "Channel " + channel)
             .setCharacteristic(hap.Characteristic.SerialNumber, stick.port + ":" + channel);
+
+        this.services.push(this.informationService);
     }
 
     abstract processState(state: number, currentTimestamp: number): void;
 
-    abstract getServices(): Service[];
+    /**
+     * This method is called directly after creation of this instance.
+     * It should return all services which should be added to the accessory.
+     */
+     getServices(): Service[] {
+        return this.services;
+    }    
 }
