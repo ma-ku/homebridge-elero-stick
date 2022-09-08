@@ -23,6 +23,9 @@ export class EleroShutterAccessory extends EleroAccessory {
     // Time of the shutter to move from 0 to 100
     protected _duration: number;
     
+    // Time before the shutter actually moves at full speed
+    protected _startDelay: number = 0;
+
     // Is the cover blocked/jammed?
     protected _jammed: boolean = false;
     
@@ -50,6 +53,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         super(hap, log, platformConfig, motorConfig, uuid, stick, channel);
 
         this._duration = motorConfig.duration || 20000;
+        this._startDelay = motorConfig.startDelay || 0;
         this._currentPositionState = hap.Characteristic.PositionState.STOPPED;
         this._reverse = motorConfig.reverse || false;
 
@@ -450,10 +454,12 @@ export class EleroShutterAccessory extends EleroAccessory {
         else if (state == ELERO_STATES.START_MOVE_DOWN) {
             newState = this.hap.Characteristic.PositionState.DECREASING;
             newInterval = this.platformConfig.movingUpdateInterval;
+            this._lastStatusTimestamp = currentTimestamp + this._startDelay;
         }
         else if (state == ELERO_STATES.START_MOVE_UP) {
             newState = this.hap.Characteristic.PositionState.INCREASING;
             newInterval = this.platformConfig.movingUpdateInterval;
+            this._lastStatusTimestamp = currentTimestamp + this._startDelay;
         }
         else if (state == ELERO_STATES.BLOCKING) {
             newState = this.hap.Characteristic.PositionState.STOPPED;

@@ -23,13 +23,15 @@
 				"title": "Polling time (ms)",
 				"type": "integer",
 				"required": false,
-				"default": "5000"
+				"default": 5000,
+				"minimum": 1000
 			},
 			"movingUpdateInterval": {
 				"title": "Polling time while moving (ms)",
 				"type": "integer",
 				"required": false,
-				"default": "1500"
+				"default": 1500,
+				"minimum": 500
 			},
 			"motors": {
 				"title": "Motors",
@@ -68,7 +70,14 @@
 							"title": "Opening time (ms)",
 							"type": "integer",
 							"required": true,
-							"default": 24000
+							"default": 24000,
+							"minimum": 1000
+						},
+						"startDelay": {
+							"title": "Delay before motor moves",
+							"type": "integer",
+							"required": false,
+							"minimum": 0
 						}
 					}
 				}

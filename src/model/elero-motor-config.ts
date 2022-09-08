@@ -12,4 +12,7 @@ export interface EleroMotorConfig {
     duration?: number;
 
     reverse?: boolean;
+
+    startDelay?: number;
+    
 }

@@ -48,6 +48,7 @@ The following parameters are currently available for a channel:
 * **name**: The name of the channel when displayed in Homekit
 * **type**: Type of controlled device. Allowed values are: **shutter**, **shades**, **heating**, and **lights**.
 * **duration**: The duration in milliseconds it takes the shutter to go from the fully closed to the fully open position. This is used to calculate the intermediate positions based on the elapsed time during movements.
+* **startDelay**: This is an optional value that allows the plugin to compensate for motors that start with delay or slow acceleration.
 * **reverse**: The motor is moving in reverse direction so that open and closed state will be reported inverted. 
 
 ## Notes
