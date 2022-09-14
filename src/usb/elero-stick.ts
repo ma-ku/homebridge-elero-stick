@@ -2,33 +2,33 @@ import { Logging } from "homebridge";
 import { EventEmitter } from 'events';
 import SerialPort from 'serialport'
 
-const ELERO_COMMANDS = {
-    UP:                     0x20,
-    INTERM_POS:             0x44,
-    VENT_POS:               0x24,
-    DOWN:                   0x40,
-    STOP:                   0x10  
+enum ELERO_COMMANDS {
+    UP =                    0x20,
+    INTERM_POS =            0x44,
+    VENT_POS =              0x24,
+    DOWN =                  0x40,
+    STOP =                  0x10  
 };
 
-export const ELERO_STATES = {
-    NO_INFORMATION:         0x00,
-    TOP_POS_STOP:           0x01,
-    BOTTOM_POS_STOP:        0x02,
-    INTERM_POS_STOP:        0x03,
-    TILT_POS_STOP:          0x04,
-    BLOCKING:               0x05,
-    OVERHEATED:             0x06,
-    TIMEOUT:                0x07,
-    START_MOVE_UP:          0x08,
-    START_MOVE_DOWN:        0x09,
-    MOVING_UP:              0x0A,
-    MOVING_DOWN:            0x0B,
-    STOP_UNDEFINED_POS:     0x0D,
-    TOP_VENT_POS_STOP:      0x0E,
-    BOTTOM_INTERM_POS_STOP: 0x0F,
-    SWITCHING_DEVICE_OFF:   0x10,
-    SWITCHING_DEVICE_ON:    0x11
-};
+export enum ELERO_STATES {
+    NO_INFORMATION =        0x00,
+    TOP_POS_STOP =          0x01,
+    BOTTOM_POS_STOP =       0x02,
+    INTERM_POS_STOP =       0x03,
+    TILT_POS_STOP =         0x04,
+    BLOCKING =              0x05,
+    OVERHEATED =            0x06,
+    TIMEOUT =               0x07,
+    START_MOVE_UP =         0x08,
+    START_MOVE_DOWN =       0x09,
+    MOVING_UP =             0x0A,
+    MOVING_DOWN =           0x0B,
+    STOP_UNDEFINED_POS =    0x0D,
+    TOP_VENT_POS_STOP =     0x0E,
+    BOTTOM_INTERM_POS_STOP =0x0F,
+    SWITCHING_DEVICE_OFF =  0x10,
+    SWITCHING_DEVICE_ON =   0x11
+ };
 
 const DEFAULT_BAUDRATE = 38400
 const DEFAULT_BYTESIZE = 8
@@ -38,6 +38,15 @@ const DEFAULT_STOPBITS = 1
 export declare interface EleroStick {
     on(event: 'connect', listener: (channels: number[]) => void): this;
     on(event: 'status', listener: (channel: number, state: number) => void): this;
+}
+
+function hex(data: Uint8Array | number[]) : string {
+
+    let msg = "[";
+    data.forEach( d => { msg += d.toString(16).padStart(2,'0') + " "; });
+    msg += "]";
+
+    return msg;
 }
 
 export class EleroStick extends EventEmitter {
@@ -78,7 +87,6 @@ export class EleroStick extends EventEmitter {
         this.parser = this.serial.pipe(new EleroParser(this.log))
 
         this.parser.on('data', (data) => {
-                            if (this.log) this.log.debug("Serial port data received");
                             this.incomingData(data);
                         })
                     
@@ -218,7 +226,7 @@ export class EleroStick extends EventEmitter {
 
     private incomingData(data: number[]): void {
 
-        if (this.log) this.log.debug("Incoming data");
+        if (this.log) this.log.debug("Incoming data: " + hex(data));
 
         if (this.checksum(data) == 0) {
             
@@ -259,6 +267,7 @@ export class EleroStick extends EventEmitter {
     }
 
     protected statusReceived(channel: number, state: number) {
+        if (this.log) this.log.debug("Status of channel %d: %s", channel, ELERO_STATES[state]);
         this.emit('status', channel, state);
     }
 
@@ -351,7 +360,7 @@ export class EleroParser extends Transform {
 
     _transform(chunk: any, encoding: string, callback: TransformCallback): void {
 
-        if (this.log) this.log.debug('Received data from elero stick: ' + chunk);
+        if (this.log) this.log.debug('Received data from elero stick: ' + hex(chunk));
 
         let cursor = 0  
         while (cursor < chunk.length) {
