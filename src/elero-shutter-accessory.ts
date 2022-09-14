@@ -16,6 +16,12 @@ import { EleroMotorConfig } from "./model/elero-motor-config";
 import { EleroStick, ELERO_STATES } from "./usb/elero-stick";
 import { EleroConfiguration } from "./elero-configuration";
 
+enum PositionStates {
+    DECREASING = 0,
+    INCREASING = 1,
+    STOPPED = 2
+}
+
 export class EleroShutterAccessory extends EleroAccessory {
 
     protected readonly windowCoveringService: Service;
@@ -109,15 +115,15 @@ export class EleroShutterAccessory extends EleroAccessory {
 
         let sequence: {(stick: EleroStick, channel: number): number;}[] = [
             (stick: EleroStick, channel: number): number => { stick.commandStop([channel]); return 250; },
-            (stick: EleroStick, channel: number): number => { stick.commandUp([channel]);   return 1000; },
-            (stick: EleroStick, channel: number): number => { stick.commandDown([channel]); return 1000; },
-            (stick: EleroStick, channel: number): number => { stick.commandUp([channel]);   return 1000; },
-            (stick: EleroStick, channel: number): number => { stick.commandDown([channel]); return 1000; },
+            (stick: EleroStick, channel: number): number => { stick.commandUp([channel]);   return 750; },
+            (stick: EleroStick, channel: number): number => { stick.commandDown([channel]); return 750; },
+            (stick: EleroStick, channel: number): number => { stick.commandUp([channel]);   return 750; },
+            (stick: EleroStick, channel: number): number => { stick.commandDown([channel]); return 750; },
             (stick: EleroStick, channel: number): number => { stick.commandStop([channel]); return 250; }
         ];
         
-        this.log.info('Identify!');
-        
+        this.log.debug('[%d][%s] Identify', this.channel, this.name);
+
         this.runCallback(sequence);
     }
 
@@ -186,7 +192,7 @@ export class EleroShutterAccessory extends EleroAccessory {
             }
         }
 
-        this.log.debug('[%d][%s] Requested PositionState: %s', this.channel, this.name, state);
+        this.log.debug('[%d][%s] Requested PositionState: %s', this.channel, this.name, PositionStates[state]);
         callback(null, state);
     }
 
@@ -271,7 +277,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         this._currentPositionState = value;
 
         let hkValue = this.calculateState(this._currentPositionState);
-        this.log.debug("[%d] Updating currentPositionState: %d", this.channel, hkValue);
+        this.log.debug("[%d] Updating currentPositionState: %d", this.channel, PositionStates[hkValue]);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.PositionState)
             .updateValue(hkValue);
@@ -291,7 +297,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         this._currentPositionState = value;
 
         let hkValue = this.calculateState(this._currentPositionState);
-        this.log.debug("[%d] Setting currentPositionState: %d", this.channel, hkValue);
+        this.log.debug("[%d] Setting currentPositionState: %d", this.channel, PositionStates[hkValue]);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.PositionState)
             .setValue(hkValue);
