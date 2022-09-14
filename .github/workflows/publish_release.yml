@@ -16,9 +16,9 @@ on:
         required: false
         default: ''
       branch:
-        description: 'master/next/beta'
+        description: 'develop/release/beta'
         required: true
-        default: 'master'
+        default: 'release'
 
 jobs:
 
