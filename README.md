@@ -55,4 +55,15 @@ The following parameters are currently available for a channel:
 1. This plugin has been tested with a RolTop motor and due to the lack of motorized blinds, some of the features offered by the Elero Transmitter Stick could not be exercised. 
 2. The driver tries to monitor also manually triggered movements (e.g. by moving the shutter using linked controllers instead of using HomeKit). This might not yet be 100% perfect.
 
+## Troubleshooting
+* Check if the motors are in bi-directional mode.
+* Try to control each motor directly from the Elero-Stick.
+* Create a detailed log to help tracing bugs.
+
+## Logging
+**NOTE**: Logs may contain sensitive data such as passwords or authentication tokens. Please review the logs before sharing them with others.
+
+This plugin already provides logs for the general behavior of the plugin. By enabling the `-D` option running HomeBridge, you will get also detailed information about internal decision making and timings that help to improved the settings for your Elero stick. If that is not sufficient, you can also enable logging of the serial communication between the plugin and the Elero stick. Add `"debugSerial": true` to the platform configuration and restart. Since debug logging produces a significant amount of
+data, you should only turn it on for a limited time. 
+
 Feel free to contribute to make this a better plugin!
