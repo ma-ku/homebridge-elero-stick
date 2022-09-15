@@ -1,0 +1,36 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+categories:
+  - title: 'Device Support'
+    labels:
+    - 'Device Request'
+    - 'Device Improvement'
+  - title: 'Enhancements'
+    labels:
+      - 'Feature Request'
+      - 'Enhancement'
+  - title: 'Bug Fixes'
+    labels:
+      - 'Fix'
+      - 'bugfix'
+      - 'bug'
+
+change-template: '- $TITLE [#$NUMBER]($URL)'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'minor' 
+  patch:
+    labels:
+      - 'patch'
+  default: patch
+template: |
+  # Contributors:
+  The following users have been contributing to this release. Thank you for that! <br/>
+  $CONTRIBUTORS	<br/>
+  # Changes
+  $CHANGES
