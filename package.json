@@ -1,6 +1,6 @@
 {
   "name": "homebridge-elero-stick",
-  "version": "1.3.1-beta.0",
+  "version": "1.3.1-beta.1",
   "displayName": "Elero Remote Control",
   "description": "Elero funkstick for homebridge: https://github.com/ma-ku/homebridge-elero-stick",
   "main": "dist/elero-stick-platform.js",
