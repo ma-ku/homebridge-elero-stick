@@ -167,7 +167,7 @@ export class EleroShutterAccessory extends EleroAccessory {
 
     // HomeKit callback: GET ObstructionDetected
     protected async getObstructionDetected(callback: CharacteristicGetCallback) {
-        this.log.debug('[%d][%s] Get ObstructionDetected: %s', this.channel, this.isJammed);
+        this.log.debug('[%d][%s] Get ObstructionDetected: %s', this.channel, this.name, this.isJammed);
         callback(null, this.isJammed);
     }
 
@@ -222,7 +222,7 @@ export class EleroShutterAccessory extends EleroAccessory {
             this._currentTargetPosition = value;
 
             let hkValue = this.calculatePosition(this._currentTargetPosition);
-            this.log.debug("[%d] Updating currentTargetPosition: %d", this.channel, hkValue);
+            this.log.debug("[%d][%s] Updating currentTargetPosition: %d", this.channel, this.name, hkValue);
             this.windowCoveringService
                 .getCharacteristic(this.hap.Characteristic.TargetPosition)
                 .updateValue(hkValue);
@@ -235,14 +235,14 @@ export class EleroShutterAccessory extends EleroAccessory {
     // HomeKit callback: GET TargetPosition
     protected async getTargetPosition(callback: CharacteristicGetCallback) {
         let hkValue = this.calculatePosition(this._currentTargetPosition);
-        this.log.debug('[%d] Requested TargetPosition: %s', this.channel, hkValue);
+        this.log.debug('[%d][%s] Requested TargetPosition: %s', this.channel, this.name, hkValue);
         callback(null, hkValue);
     }
 
     // HomeKit callback: SET TargetPosition
     protected async setTargetPosition(pos: CharacteristicValue, callback: CharacteristicSetCallback) {
 
-        this.log.debug('[%d] Set TargetPosition: %d', this.channel, pos);
+        this.log.debug('[%d][%s] Set TargetPosition: %d', this.channel, this.name, pos);
         this._currentTargetPosition = this.calculatePosition(pos as number);
         this._positionHeld = 0;
 
@@ -275,7 +275,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         this._currentPositionState = value;
 
         let hkValue = this.calculateState(this._currentPositionState);
-        this.log.debug("[%d] Updating currentPositionState: %s", this.channel, PositionStates[hkValue]);
+        this.log.debug("[%d][%s] Updating currentPositionState: %s", this.channel, this.name, PositionStates[hkValue]);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.PositionState)
             .updateValue(hkValue);
@@ -285,7 +285,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         this._lastPosition = value;
 
         let hkValue = this.calculatePosition(this._lastPosition);
-        this.log.debug("[%d] Setting lastPosition: ", this.channel, hkValue);
+        this.log.debug("[%d][%s] Setting lastPosition: ", this.channel, this.name, hkValue);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.CurrentPosition)
             .setValue(hkValue);
@@ -295,7 +295,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         this._currentPositionState = value;
 
         let hkValue = this.calculateState(this._currentPositionState);
-        this.log.debug("[%d] Setting currentPositionState: %d", this.channel, PositionStates[hkValue]);
+        this.log.debug("[%d][%s] Setting currentPositionState: %d", this.channel, this.name, PositionStates[hkValue]);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.PositionState)
             .setValue(hkValue);
@@ -304,14 +304,14 @@ export class EleroShutterAccessory extends EleroAccessory {
     // HomeKit callback: GET CurrentPosition
     protected async getCurrentPosition(callback:CharacteristicGetCallback) {
         let hkValue = this.calculatePosition(this.lastPosition);
-        this.log.debug('[%d] Requested CurrentPosition: %s', this.channel, hkValue);
+        this.log.debug('[%d][%s] Requested CurrentPosition: %s', this.channel, this.name, hkValue);
         callback(null, hkValue);
     }
 
     set currentTargetPosition(value) {
         this._currentTargetPosition = value;
         let hkValue = this.calculatePosition(this._currentTargetPosition);
-        this.log.debug("[%d] Setting currentTargetPosition: ", this.channel, hkValue);
+        this.log.debug("[%d][%s] Setting currentTargetPosition: ", this.channel, this.name, hkValue);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.TargetPosition)
             .setValue(hkValue);
@@ -326,13 +326,13 @@ export class EleroShutterAccessory extends EleroAccessory {
 
     // HomeKit callback: GET HoldPosition
     protected async getHoldPosition(callback: CharacteristicGetCallback) {
-        this.log.debug('[%d] Requested HoldPosition: %s', this.channel, this._positionHeld);
+        this.log.debug('[%d][%s] Requested HoldPosition: %s', this.channel, this.name, this._positionHeld);
         callback(null, this._positionHeld);
     }
 
     // HomeKit callback: SET HoldPosition
     protected async setHoldPosition(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-        this.log.debug('[%d] Set HoldPosition: %d', this.channel, value);
+        this.log.debug('[%d][%s] Set HoldPosition: %d', this.channel, this.name, value);
 
         if (value == 1) {
             this.stick.commandStop([this.channel]);
