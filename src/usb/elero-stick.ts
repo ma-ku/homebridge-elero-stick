@@ -114,17 +114,18 @@ export class EleroStick extends EventEmitter {
 
     private sendCommand(command: number[], urgent: boolean = false): void {
 
-        if (this.connectionBusy) {
-            if (urgent == true) {
-                this.commandQueue.unshift(command);
-            }
-            else {
-                this.commandQueue.push(command);
-            }
-        } 
+        if (urgent == true) {
+            this.commandQueue.unshift(command);
+        }
         else {
+            this.commandQueue.push(command);
+        }
+
+        if (this.log) this.log.debug("sendCommand: %s, command queue length: %d", hex(command), this.commandQueue.length );
+
+        if (!this.connectionBusy) {
             this.connectionBusy = true;
-            this.send(command);
+            this.sendNext();
         }
     }
 
