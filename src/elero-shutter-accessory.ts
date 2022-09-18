@@ -356,6 +356,8 @@ export class EleroShutterAccessory extends EleroAccessory {
               
         var actualMotorState = this.hap.Characteristic.PositionState.STOPPED;
 
+        this.log.debug('[%d][%s] Reported motor state %s', this.channel, this.name, ELERO_STATES[state]);
+
         switch (state) {
         case ELERO_STATES.MOVING_DOWN:
         case ELERO_STATES.START_MOVE_DOWN:
