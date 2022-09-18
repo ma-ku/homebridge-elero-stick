@@ -275,7 +275,7 @@ export class EleroShutterAccessory extends EleroAccessory {
         this._currentPositionState = value;
 
         let hkValue = this.calculateState(this._currentPositionState);
-        this.log.debug("[%d] Updating currentPositionState: %d", this.channel, PositionStates[hkValue]);
+        this.log.debug("[%d] Updating currentPositionState: %s", this.channel, PositionStates[hkValue]);
         this.windowCoveringService
             .getCharacteristic(this.hap.Characteristic.PositionState)
             .updateValue(hkValue);
