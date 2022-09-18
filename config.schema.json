@@ -61,6 +61,11 @@
 								"heating"
 							]
 						},
+						"disabled": {
+							"title": "Motor disabled",
+							"type": "boolean",
+							"required": false
+						}, 						
 						"reverse": {
 							"title": "Reverse direction",
 							"type": "boolean",

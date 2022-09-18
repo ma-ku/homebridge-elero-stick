@@ -1,12 +1,10 @@
 import {
-  AccessoryPlugin,
   CharacteristicGetCallback,
   CharacteristicSetCallback,
   CharacteristicValue,
   HAP,
   Logging,
   Service,
-  CharacteristicEventTypes
 } from "homebridge";
 
 import { EleroAccessory } from './elero-accessory';

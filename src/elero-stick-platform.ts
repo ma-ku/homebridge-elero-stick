@@ -9,7 +9,7 @@ import {
 
 import { EleroAccessory } from "./elero-accessory";
 import { EleroShutterAccessory } from "./elero-shutter-accessory";
-import { EleroStick, ELERO_STATES } from "./usb/elero-stick";
+import { EleroStick } from "./usb/elero-stick";
 import { performance } from 'perf_hooks';
 import { EleroMotorConfig } from './model/elero-motor-config';
 import { EleroPlatformConfig } from './model/elero-platform-config';
@@ -91,6 +91,8 @@ class EleroStickPlatform implements StaticPlatformPlugin {
 
         this.serialConnection = new EleroStick(this.port, (config.debugSerial ? this.log : undefined));
 
+        this.serialConnection.sendInterval = this.config.sendInterval || 250;
+
         if (api) {
             this.api = api;
 
@@ -159,6 +161,8 @@ class EleroStickPlatform implements StaticPlatformPlugin {
             updateInterval: config['updateInterval'] || DEFAULT_UPDATEINTERVAL,
             movingUpdateInterval: config['movingUpdateInterval'] || DEFAULT_MOVINGUPDATEINTERVAL,
         
+            sendInterval: config['sendInterval'] || 250,
+
             motors: {}
         }
 
@@ -173,6 +177,7 @@ class EleroStickPlatform implements StaticPlatformPlugin {
                 name: userConfig['name'] || "Channel " + userConfig['channel'],
                 displayName: userConfig['displayName'] || "Channel " + userConfig['channel'],
                 duration: userConfig['duration'] || 10000,
+                disabled: userConfig['disabled'] || false,
                 reverse: userConfig['reverse'] || false
             }
 
@@ -261,32 +266,40 @@ class EleroStickPlatform implements StaticPlatformPlugin {
             // Check if we have a corresponding accessory configuration
             // for that channel that we can use to complement the accessory
             // configuration
-            var channelConfig: EleroMotorConfig = stick.config.motors[ channel ] || {
-                                                                                        type: 'shutter',
-                                                                                        channel: channel,
-                                                                                        name: 'Channel ' + channel
-                                                                                    };
+            var channelConfig: EleroMotorConfig = Object.assign( 
+                                                            {
+                                                                type: 'shutter',
+                                                                channel: channel,
+                                                                name: 'Channel ' + channel,
+                                                                disabled: false
+                                                            },
+                                                            stick.config.motors[ channel ]);
 
             // If this accessory is new, we will create a new instance
             var accessory: EleroAccessory | undefined = undefined;
 
-            switch (channelConfig.type) {
-            case 'shades':
-            case 'shutter':
-            case 'lights':
-            case 'heating':
-                accessory = new EleroShutterAccessory(this.api.hap, this.log, this.platformConfig, channelConfig, uuid, this.serialConnection, channel);
-                break;
-
-            default:
-                stick.log.error("Cannot creste accessory of type '%s' for channel: %s", channelConfig.type, channel);
-            }
-
-            if (accessory) {
-                this.eleroAccessories.set(accessory.uuid, accessory)
+            if (!(channelConfig.disabled || false)) {
+                switch (channelConfig.type) {
+                case 'shades':
+                case 'shutter':
+                case 'lights':
+                case 'heating':
+                    accessory = new EleroShutterAccessory(this.api.hap, this.log, this.platformConfig, channelConfig, uuid, this.serialConnection, channel);
+                    break;
+    
+                default:
+                    stick.log.error("Cannot creste accessory of type '%s' for channel: %s", channelConfig.type, channel);
+                }
+    
+                if (accessory) {
+                    this.eleroAccessories.set(accessory.uuid, accessory)
+                }
+                else {
+                    stick.log.error("Cannot add accessory for channel: %s", channel);
+                }
             }
             else {
-                stick.log.error("Cannot add accessory for channel: %s", channel);
+                stick.log.info("Channel: %s is disabled, no accessory will get created", channel);
             }
         })    
         

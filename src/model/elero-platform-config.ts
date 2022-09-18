@@ -12,5 +12,7 @@ export interface EleroPlatformConfig {
 
     debugSerial?: boolean;
 
+    sendInterval?: number;
+
     motors: { [key:number]:EleroMotorConfig; };
 }

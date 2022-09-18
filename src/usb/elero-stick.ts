@@ -55,6 +55,8 @@ export class EleroStick extends EventEmitter {
 
     readonly port: string;
 
+    public sendInterval: number = 250;
+
     private serial: SerialPort;
     private parser: EleroParser;
 
@@ -62,8 +64,6 @@ export class EleroStick extends EventEmitter {
     private commandQueue: number[][] = [];
     
     private channels: number[] = [];
-
-    private movingUpdateInterval: number = 1500;
 
     constructor(port: string, log?: Logging) {
         super();
@@ -155,7 +155,7 @@ export class EleroStick extends EventEmitter {
         var stick = this
         this._currentTimer = setTimeout( () => {
             stick.sendNext()
-        }, 250);
+        }, this.sendInterval);
     }
 
     private sendNext(): void {

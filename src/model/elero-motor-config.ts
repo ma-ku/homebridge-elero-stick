@@ -7,6 +7,8 @@ export interface EleroMotorConfig {
 
     name: string;
     
+    disabled?: boolean;
+
     displayName?: string;
     
     duration?: number;
@@ -14,5 +16,4 @@ export interface EleroMotorConfig {
     reverse?: boolean;
 
     startDelay?: number;
-    
 }

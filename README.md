@@ -42,13 +42,14 @@ Add the platform in `config.json` in your home directory inside `.homebridge`. A
 
 The `port` property is required to point to the USB Stick that is mounted as a serial line. Each learned channel (up to 15 channels are supported per stick) will be registered in homebridge. If you want to add additional parameters to a given instance, the `channels` property allows to supply additional properties for each channel, indexed by the channel identifier (0-15).
 
-Since the motors are ectively monitored by the plugin, the intervals can be configured. If no motor is detected as moving, then the **updateInterval** will be applied. This is useful for the plugin to detect movements that were triggered by other remotes. Once at least one motor is detected as moving, the frequency will be change to **movingUpdateInterval** to allow finer control of the movements. All values are milliseconds and must be greater than zero.
+Since the motors are ectively monitored by the plugin, the intervals can be configured. If no motor is detected as moving, then the **updateInterval** will be applied. This is useful for the plugin to detect movements that were triggered by other remotes. Once at least one motor is detected as moving, the frequency will be change to **movingUpdateInterval** to allow finer control of the movements. An additional parameter for fine-grained control is **sendInterval** that controls the frequency with that commands are sent to the transmitter stick, its default value is 250ms. All values are milliseconds and must be greater than zero. Please be careful with these settings. 
 
 The following parameters are currently available for a channel:
 * **name**: The name of the channel when displayed in Homekit
 * **type**: Type of controlled device. Allowed values are: **shutter**, **shades**, **heating**, and **lights**.
 * **duration**: The duration in milliseconds it takes the shutter to go from the fully closed to the fully open position. This is used to calculate the intermediate positions based on the elapsed time during movements.
 * **startDelay**: This is an optional value that allows the plugin to compensate for motors that start with delay or slow acceleration.
+* **disabled**: Allows diabling the accessory for a motor. The accessory will not get created and will not appear in HomeKit.
 * **reverse**: The motor is moving in reverse direction so that open and closed state will be reported inverted. 
 
 ## Notes
