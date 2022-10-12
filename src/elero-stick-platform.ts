@@ -72,8 +72,8 @@ class EleroStickPlatform implements StaticPlatformPlugin {
         this.port = this.config['port'];
 
         // We will request an update from the stick every 5 seconds
-        this.defaultUpdateInterval = this.config.updateInterval || 5000;
-        this.movingUpdateInterval = this.config.movingUpdateInterval || 1500;
+        this.defaultUpdateInterval = this.config["updateInterval"] || 5000;
+        this.movingUpdateInterval = this.config["movingUpdateInterval"] || 1500;
 
         this.updateInterval = this.defaultUpdateInterval;
 

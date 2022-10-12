@@ -51,6 +51,8 @@ export abstract class EleroAccessory implements AccessoryPlugin {
         this.stick = stick;
         this.channel = channel;
 
+        this.reportingInterval = platformConfig.defaultUpdateInterval;
+
         this.informationService = new hap.Service.AccessoryInformation()
             .setCharacteristic(hap.Characteristic.Manufacturer, "Elero")
             .setCharacteristic(hap.Characteristic.Model, "Channel " + channel)
