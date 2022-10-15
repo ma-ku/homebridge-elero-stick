@@ -33,6 +33,13 @@
 				"default": 1500,
 				"minimum": 500
 			},
+			"sendInterval": {
+				"title": "Frequency for sending commands to USB stick (ms)",
+				"type": "integer",
+				"required": false,
+				"default": 250,
+				"minimum": 150
+			},
 			"motors": {
 				"title": "Motors",
 				"type": "array",
