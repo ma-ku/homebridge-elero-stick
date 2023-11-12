@@ -1,6 +1,6 @@
 import { Logging } from "homebridge";
 import { EventEmitter } from 'events';
-import SerialPort from 'serialport'
+import { SerialPort } from 'serialport'
 
 enum ELERO_COMMANDS {
     UP =                    0x20,
@@ -73,8 +73,8 @@ export class EleroStick extends EventEmitter {
 
         if (this.log) this.log.info('Logging enabled for EleroStick');
 
-        this.serial = new SerialPort(port, 
-                                     {
+        this.serial = new SerialPort({
+                                        path: port,
                                         baudRate: DEFAULT_BAUDRATE,
                                         dataBits: DEFAULT_BYTESIZE,
                                         parity: DEFAULT_PARITY,
