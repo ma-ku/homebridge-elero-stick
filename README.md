@@ -6,11 +6,9 @@
 
 If you are new to Homebridge, please first read the Homebridge [documentation](https://www.npmjs.com/package/homebridge).
 
-Install homebridge:
-```sh
-sudo npm install -g homebridge
-```
-Install homebridge-elero-stick:
+- Install homebridge as described in the Homebridge [Wiki](https://github.com/homebridge/homebridge/wiki).
+
+- Install homebridge-elero-stick:
 ```sh
 sudo npm install -g homebridge-elero-stick
 ```

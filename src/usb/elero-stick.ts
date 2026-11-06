@@ -51,10 +51,6 @@ function hex(data: Uint8Array | number[]) : string {
 
 export class EleroStick extends EventEmitter {
 
-    private readonly log?: Logging;
-
-    readonly port: string;
-
     public sendInterval: number = 250;
 
     private serial: SerialPort;
@@ -65,13 +61,13 @@ export class EleroStick extends EventEmitter {
     
     private channels: number[] = [];
 
-    constructor(port: string, log?: Logging) {
+    constructor(
+        readonly port: string, 
+        readonly log?: Logging) {
+
         super();
 
-        this.log = log;
-        this.port = port;
-
-        if (this.log) this.log.info('Logging enabled for EleroStick');
+        this.log?.info('Logging enabled for EleroStick');
 
         this.serial = new SerialPort({
                                         path: port,
@@ -91,11 +87,11 @@ export class EleroStick extends EventEmitter {
                         })
                     
                     .on('connect', () => {
-                            if (this.log) this.log.debug("Serial port connected");
+                            this.log?.debug("Serial port connected");
                         })
                         
                     .on('close', () => {
-                            if (this.log) this.log.debug("Serial port closed");
+                            this.log?.debug("Serial port closed");
                             this.serial.open();
                         });                                     
         
@@ -121,7 +117,7 @@ export class EleroStick extends EventEmitter {
             this.commandQueue.push(command);
         }
 
-        if (this.log) this.log.debug("sendCommand: %s, command queue length: %d", hex(command), this.commandQueue.length );
+        this.log?.debug("sendCommand: %s, command queue length: %d", hex(command), this.commandQueue.length );
 
         if (!this.connectionBusy) {
             this.connectionBusy = true;
@@ -148,7 +144,7 @@ export class EleroStick extends EventEmitter {
         this.serial.write(msg, (err) => {
           if (err) {
             this.connectionBusy = false;
-            if (this.log) this.log.error('Error on write: ', err.message);
+            this.log?.error('Error on write: ', err.message);
                 return 
           }
         });
@@ -182,32 +178,32 @@ export class EleroStick extends EventEmitter {
     }
 
     public commandUp(channels: number[]): void {
-        if (this.log) this.log.debug("commandUp", channels)
+        this.log?.debug("commandUp", channels)
         this.easySend(channels, ELERO_COMMANDS.UP, true);
     }
 
     public commandDown(channels: number[]): void {
-        if (this.log) this.log.debug("commandDown", channels)
+        this.log?.debug("commandDown", channels)
         this.easySend(channels, ELERO_COMMANDS.DOWN, true)
     }
 
     public commandStop(channels: number[]): void {
-        if (this.log) this.log.debug("commandStop", channels)
+        this.log?.debug("commandStop", channels)
         this.easySend(channels, ELERO_COMMANDS.STOP, true)
     }
 
     public commandVentilationPosition(channels: number[]): void {
-        if (this.log) this.log.debug("commandVentilationPosition", channels)
+        this.log?.debug("commandVentilationPosition", channels)
         this.easySend(channels, ELERO_COMMANDS.VENT_POS, true)
     }
 
     public commandIntermediatePosition(channels: number[]): void {
-        if (this.log) this.log.debug("commandIntermediatePosition", channels)
+        this.log?.debug("commandIntermediatePosition", channels)
         this.easySend(channels, ELERO_COMMANDS.INTERM_POS, true)
     }
 
     public easyInfo(channels: number[]): void {
-        if (this.log) this.log.debug("easyInfo", channels)
+        this.log?.debug("easyInfo", channels)
         channels = this.checkChannels(channels)
         if (channels.length == 0) {
             channels = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ]
@@ -220,14 +216,14 @@ export class EleroStick extends EventEmitter {
     }
       
     public easyCheck() {
-        if (this.log) this.log.debug("Easy Check");
+        this.log?.debug("Easy Check");
         this.sendCommand([0xaa, 0x02, 0x4a]);
     }
       
 
     private incomingData(data: number[]): void {
 
-        if (this.log) this.log.debug("Incoming data: " + hex(data));
+        this.log?.debug("Incoming data: " + hex(data));
 
         if (this.checksum(data) == 0) {
             
@@ -257,7 +253,7 @@ export class EleroStick extends EventEmitter {
             } while (false);
         }
         else {
-            if (this.log) this.log.error("Invalid checksum ", this.checksum(data));
+            this.log?.error("Invalid checksum ", this.checksum(data));
         }
 
         this.sendNext()
@@ -268,7 +264,7 @@ export class EleroStick extends EventEmitter {
     }
 
     protected statusReceived(channel: number, state: number) {
-        if (this.log) this.log.debug("Status of channel %d: %s", channel, ELERO_STATES[state]);
+        this.log?.debug("Status of channel %d: %s", channel, ELERO_STATES[state]);
         this.emit('status', channel, state);
     }
 
@@ -361,7 +357,7 @@ export class EleroParser extends Transform {
 
     _transform(chunk: any, encoding: string, callback: TransformCallback): void {
 
-        if (this.log) this.log.debug('Received data from elero stick: ' + hex(chunk));
+        this.log?.debug('Received data from elero stick: ' + hex(chunk));
 
         let cursor = 0  
         while (cursor < chunk.length) {

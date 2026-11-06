@@ -15,8 +15,7 @@ import { EleroMotorConfig } from './model/elero-motor-config';
 import { EleroPlatformConfig } from './model/elero-platform-config';
 import { EleroConfiguration } from './elero-configuration';
 
-const PluginName = "homebridge-elero-stick";
-
+const PLUGIN_NAME = "homebridge-elero-stick";
 const PLATFORM_NAME = "EleroStick";
 
 const DEFAULT_UPDATEINTERVAL = 5000;
@@ -27,18 +26,15 @@ let hap: HAP;
 export = (api: API) => {
   hap = api.hap;
 
-  api.registerPlatform(PLATFORM_NAME, EleroStickPlatform);
+  api.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, EleroStickPlatform);
 };
 
 class EleroStickPlatform implements StaticPlatformPlugin {
-
-    private readonly log: Logging;
 
     private name: string;
 
     private port: string;
 
-    private readonly api: API;
     private readonly serialConnection: EleroStick;
 
     private config: EleroPlatformConfig;
@@ -58,10 +54,10 @@ class EleroStickPlatform implements StaticPlatformPlugin {
     private hasCallback: boolean = false;
     private accessoriesCallback: (foundAccessories: AccessoryPlugin[]) => void;
 
-    constructor(log: Logging, config: PlatformConfig, api: API) {
-
-        this.log = log;
-        this.api = api;
+    constructor(
+        private readonly log: Logging, 
+        config: PlatformConfig, 
+        private readonly api: API) {
 
         // Dummy-Callback
         this.accessoriesCallback = this.dummy;

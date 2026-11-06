@@ -9,7 +9,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v3
+      - uses: actions/stale@v11
         with:
           stale-issue-message: 'As there has not been any response in 21 days, this issue has been automatically marked as stale. **At OP: Please either close this issue or keep it active**  It will be closed in 7 days if no further activity occurs.'
           stale-issue-label: 'stale'

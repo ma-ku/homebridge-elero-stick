@@ -1,0 +1,44 @@
+{
+  "bridge": {
+    "name": "PluginTemplate",
+    "username": "AA:BB:CC:DD:EE:FF",
+    "port": 51826,
+    "pin": "031-45-154"
+  },
+  "description": "HomeBridge HTTP Status Control",
+  "plugins": [
+    "homebridge-plugin-name",
+    "homebridge-config-ui-x",
+    "homebridge-elero-stick"
+  ],
+  "platforms": [
+    {
+      "name": "Config",
+      "port": 8581,
+      "auth": "none",
+      "theme": "auto",
+      "tempUnits": "c",
+      "lang": "auto",
+      "sudo": false,
+      "platform": "config",
+      "debug": false
+    },
+    {
+      "platform": "EleroStick",
+      "name": "EleroStick",
+      "port": "/dev/tty.usbmodem00000000001A1",
+      "updateInterval": 3500,
+      "movingUpdateInterval": 1500,
+
+      "motors": [
+        {
+          "channel": 1,
+          "type": "shutter",
+          "name": "Window Kitchen",
+          "duration": 24000
+        }
+      ]
+    }
+  ],
+  "accessories": []
+}
