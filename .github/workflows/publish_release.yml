@@ -50,8 +50,6 @@ jobs:
 
       - run: git config --global user.name '[Workflow]'
       - run: git config --global user.email '<>'
-      - run: npm install
-      - run: npm install-scripts approve @serialport/bindings-cpp
       - run: npm version ${{ github.event.inputs.version }} --preid=${{ github.event.inputs.preid }} -m "[${{ github.event.inputs.tag }}] %s"
       - run: npm update homebridge-elero-stick
       - run: git push
