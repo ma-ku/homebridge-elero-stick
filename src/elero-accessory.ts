@@ -17,17 +17,8 @@ export abstract class EleroAccessory implements AccessoryPlugin {
     displayName: string;  
     uuid: string;
 
-    // Provided by HomeBridge
-    protected readonly log: Logging;
-    protected readonly hap: HAP;
-    
     protected readonly informationService: Service;
     
-    protected readonly stick: EleroStick;
-    readonly channel: number;
-
-    readonly platformConfig: EleroConfiguration;
-
     protected services: Service[] = [];
 
     // This is a marker if we are moving the shutter ourselves. If not, it might have been
@@ -36,20 +27,20 @@ export abstract class EleroAccessory implements AccessoryPlugin {
 
     reportingInterval: number = 5000;
     
-    constructor(hap: HAP, log: Logging, platformConfig: EleroConfiguration, motorConfig: EleroMotorConfig, uuid: string, stick: EleroStick, channel: number) {
+    constructor(
+        protected readonly hap: HAP, 
+        protected readonly log: Logging, 
+        readonly platformConfig: EleroConfiguration, 
+        motorConfig: EleroMotorConfig, 
+        uuid: string, 
+        protected readonly stick: EleroStick, 
+        readonly channel: number) {
       
-        this.log = log;
-        this.hap = hap;
-        
-        this.platformConfig = platformConfig;
         
         this.name = motorConfig.name;
         this.displayName = motorConfig.displayName || motorConfig.name;
         
         this.uuid = uuid;
-
-        this.stick = stick;
-        this.channel = channel;
 
         this.reportingInterval = platformConfig.defaultUpdateInterval;
 

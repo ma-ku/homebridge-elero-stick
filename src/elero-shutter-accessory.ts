@@ -53,7 +53,15 @@ export class EleroShutterAccessory extends EleroAccessory {
     // Needed to avooid duplicate log outputs if nothing changes
     protected _lastInfo: string = '';
 
-    constructor(hap: HAP, log: Logging, platformConfig: EleroConfiguration, motorConfig: EleroMotorConfig, uuid: string, stick: EleroStick, channel: number) {
+    constructor(
+        hap: HAP, 
+        log: Logging, 
+        platformConfig: EleroConfiguration, 
+        motorConfig: EleroMotorConfig, 
+        uuid: string, 
+        stick: EleroStick, 
+        channel: number) {
+            
         super(hap, log, platformConfig, motorConfig, uuid, stick, channel);
 
         this._duration = motorConfig.duration || 20000;
