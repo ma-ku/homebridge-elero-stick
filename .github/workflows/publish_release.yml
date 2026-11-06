@@ -35,8 +35,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - run: npm install-scripts approve @serialport/bindings-cpp
       - run: npm install
+      - run: npm install-scripts approve @serialport/bindings-cpp
       - run: npm ci
       - run: npm run build
 
@@ -66,8 +66,9 @@ jobs:
         with:
           node-version: 14
           registry-url: https://registry.npmjs.org/
-      - run: npm install-scripts approve @serialport/bindings-cpp
+          
       - run: npm install
+      - run: npm install-scripts approve @serialport/bindings-cpp
       - run: npm ci
       - run: npm publish --access public --tag ${{ github.event.inputs.tag }}
         env:
