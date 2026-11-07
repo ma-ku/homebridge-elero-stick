@@ -174,12 +174,12 @@ class EleroStickPlatform implements StaticPlatformPlugin {
                 displayName: userConfig['displayName'] || "Channel " + userConfig['channel'],
                 duration: userConfig['duration'] || 10000,
                 disabled: userConfig['disabled'] || false,
-                reverse: userConfig['reverse'] || false
+                reverse: userConfig['reverse'] || false,
 
 
-                stopButton: userConfig['stopButton'] || false;
-                ventilationPositionButton: userConfig['ventilationPositionButton'] || false;
-                intermediatePositionButton: userConfig['intermediatePositionButton'] || false;
+                stopButton: userConfig['stopButton'] || false,
+                ventilationPositionButton: userConfig['ventilationPositionButton'] || false,
+                intermediatePositionButton: userConfig['intermediatePositionButton'] || false,
 
             }
 
