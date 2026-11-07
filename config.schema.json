@@ -90,7 +90,22 @@
 							"type": "integer",
 							"required": false,
 							"minimum": 0
-						}
+						},
+						"stopButton": {
+							"title": "Provide STOP-Button",
+							"type": "boolean",
+							"required": false
+						},
+						"intermediatePositionButton": {
+							"title": "Provide INTERMEDIATE POSITION-Button",
+							"type": "boolean",
+							"required": false
+						},
+						"ventilationPositionButton": {
+							"title": "Provide VENTILATION POSITION-Button",
+							"type": "boolean",
+							"required": false
+						}												
 					}
 				}
 			}
