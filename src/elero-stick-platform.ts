@@ -159,7 +159,7 @@ class EleroStickPlatform implements StaticPlatformPlugin {
         
             sendInterval: config['sendInterval'] || 250,
 
-            motors: {}
+            motors: []
         }
 
         config.motors = config.motors || []
@@ -174,7 +174,13 @@ class EleroStickPlatform implements StaticPlatformPlugin {
                 displayName: userConfig['displayName'] || "Channel " + userConfig['channel'],
                 duration: userConfig['duration'] || 10000,
                 disabled: userConfig['disabled'] || false,
-                reverse: userConfig['reverse'] || false
+                reverse: userConfig['reverse'] || false,
+
+
+                stopButton: userConfig['stopButton'] || false,
+                ventilationPositionButton: userConfig['ventilationPositionButton'] || false,
+                intermediatePositionButton: userConfig['intermediatePositionButton'] || false,
+
             }
 
             result.motors[ motorConfig.channel ] = motorConfig;

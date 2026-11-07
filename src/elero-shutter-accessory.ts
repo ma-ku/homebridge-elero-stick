@@ -24,6 +24,12 @@ export class EleroShutterAccessory extends EleroAccessory {
 
     protected readonly windowCoveringService: Service;
 
+    protected readonly stopButtonService?: Service;
+
+    protected readonly intermediatePositionButtonService?: Service;
+
+    protected readonly ventilationPositionButtonService?: Service;
+
     // Time of the shutter to move from 0 to 100
     protected _duration: number;
     
@@ -109,6 +115,21 @@ export class EleroShutterAccessory extends EleroAccessory {
         this.windowCoveringService = service;
 
         this.services.push(service);
+
+        if (motorConfig.stopButton == true) {
+            this.stopButtonService = this.createStopButton(hap, log, service);
+            service.linkedServices.push(this.stopButtonService);
+        } 
+
+        if (motorConfig.ventilationPositionButton == true) {
+            this.ventilationPositionButtonService = this.createVentilationPositionButton(hap, log, service);
+            service.linkedServices.push(this.ventilationPositionButtonService);
+        } 
+        
+        if (motorConfig.intermediatePositionButton == true) {
+            this.intermediatePositionButtonService = this.createIntermediatePositionButton(hap, log, service);
+            service.linkedServices.push(this.intermediatePositionButtonService);
+        } 
 
         log.info("Elero shutter accessory for channel '%s' created!", channel);
     }
@@ -534,5 +555,101 @@ export class EleroShutterAccessory extends EleroAccessory {
             this._lastInfo = info;
         }
     }    
+
+
+    protected createStopButton(hap: HAP, log: Logging, shutterService: Service) : Service {
+
+        let switchService = new hap.Service.Switch(this.name + " - Stop", "stop-button");
+
+        log.info("Creating stop button for channel '%s'", this.channel);
+
+        switchService.getCharacteristic(hap.Characteristic.On)
+            .on(this.hap.CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
+                    // Switch will always flip back to false
+                    callback(undefined, false);
+                })
+            .on(this.hap.CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+                    let state = value as boolean;
+
+                    if (state) {
+                        log.info("Switch pressed");
+                        this.stick.commandStop([this.channel])
+                    }
+
+                    switchService.getCharacteristic(hap.Characteristic.On).updateValue(false);
+
+                    callback();
+                });
+
+        switchService.linkedServices = [ shutterService ];
+
+        this.services.push(switchService);
+
+        return switchService;
+    }
+
+
+    protected createVentilationPositionButton(hap: HAP, log: Logging, shutterService: Service) : Service {
+
+        let switchService = new hap.Service.Switch(this.name + " - Ventilation", "ventilation-position-button");
+
+        log.info("Creating ventilation position button for channel '%s'", this.channel);
+
+        switchService.getCharacteristic(hap.Characteristic.On)
+            .on(this.hap.CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
+                    // Switch will always flip back to false
+                    callback(undefined, false);
+                })
+            .on(this.hap.CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+                    let state = value as boolean;
+
+                    if (state) {
+                        log.info("Switch pressed");
+                        this.stick.commandVentilationPosition([this.channel])
+                    }
+
+                    switchService.getCharacteristic(hap.Characteristic.On).updateValue(false);
+
+                    callback();
+                });
+
+        switchService.linkedServices = [ shutterService ];
+
+        this.services.push(switchService);
+
+        return switchService
+    }
+
+
+    protected createIntermediatePositionButton(hap: HAP, log: Logging, shutterService: Service) : Service {
+
+        let switchService = new hap.Service.Switch(this.name + " - Intermediate", "intermediate-position-button");
+
+        log.info("Creating intermediate position button for channel '%s'", this.channel);
+
+        switchService.getCharacteristic(hap.Characteristic.On)
+            .on(this.hap.CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
+                    // Switch will always flip back to false
+                    callback(undefined, false);
+                })
+            .on(this.hap.CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+                    let state = value as boolean;
+
+                    if (state) {
+                        log.info("Switch pressed");
+                        this.stick.commandIntermediatePosition([this.channel])
+                    }
+
+                    switchService.getCharacteristic(hap.Characteristic.On).updateValue(false);
+
+                    callback();
+                });
+
+        switchService.linkedServices = [ shutterService ];
+
+        this.services.push(switchService);
+
+        return switchService;
+    }
 }
 

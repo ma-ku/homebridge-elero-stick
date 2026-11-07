@@ -16,4 +16,10 @@ export interface EleroMotorConfig {
     reverse?: boolean;
 
     startDelay?: number;
+
+    stopButton?: boolean;
+
+    ventilationPositionButton? : boolean;
+    
+    intermediatePositionButton?: boolean;    
 }
