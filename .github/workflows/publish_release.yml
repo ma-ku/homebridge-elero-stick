@@ -1,5 +1,8 @@
 name: RELEASE version
 
+permissions:
+  id-token: write
+
 on: 
   workflow_dispatch:
     inputs:
@@ -35,6 +38,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - run: npm install -g npm@latest
       - run: npm install
       - run: npm install-scripts approve @serialport/bindings-cpp
       - run: npm ci
