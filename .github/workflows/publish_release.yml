@@ -70,6 +70,6 @@ jobs:
       - run: npm install
       - run: npm install-scripts approve @serialport/bindings-cpp
       - run: npm ci
-      - run: npm publish --access public --tag ${{ github.event.inputs.tag }}
+      - run: npm publish --access public --provenance --tag ${{ github.event.inputs.tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
