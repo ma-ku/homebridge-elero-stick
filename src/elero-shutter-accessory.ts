@@ -24,6 +24,12 @@ export class EleroShutterAccessory extends EleroAccessory {
 
     protected readonly windowCoveringService: Service;
 
+    protected readonly stopButtonService?: Service;
+
+    protected readonly intermediatePositionButtonService?: Service;
+
+    protected readonly ventilationPositionButtonService?: Service;
+
     // Time of the shutter to move from 0 to 100
     protected _duration: number;
     
@@ -109,6 +115,21 @@ export class EleroShutterAccessory extends EleroAccessory {
         this.windowCoveringService = service;
 
         this.services.push(service);
+
+        if (motorConfig.stopButton == true) {
+            this.stopButtonService = this.createStopButton(hap, log, service);
+            service.linkedServices.push(this.stopButtonService);
+        } 
+
+        if (motorConfig.ventilationPositionButton == true) {
+            this.ventilationPositionButtonService = this.createVentilationPositionButton(hap, log, service);
+            service.linkedServices.push(this.ventilationPositionButtonService);
+        } 
+        
+        if (motorConfig.intermediatePositionButton == true) {
+            this.intermediatePositionButtonService = this.createIntermediatePositionButton(hap, log, service);
+            service.linkedServices.push(this.intermediatePositionButtonService);
+        } 
 
         log.info("Elero shutter accessory for channel '%s' created!", channel);
     }
