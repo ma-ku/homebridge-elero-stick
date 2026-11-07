@@ -1,8 +1,4 @@
 name: RELEASE version
-
-permissions:
-  id-token: write
-
 on: 
   workflow_dispatch:
     inputs:
@@ -56,12 +52,14 @@ jobs:
       - run: git config --global user.email '<>'
       - run: npm version ${{ github.event.inputs.version }} --preid=${{ github.event.inputs.preid }} -m "[${{ github.event.inputs.tag }}] %s"
       - run: npm update homebridge-elero-stick
-      - run: git push
       - run: git push origin --tags
 
   publish:
     runs-on: ubuntu-latest
     needs: version
+    permissions:
+      id-token: write
+
     steps:
       - uses: actions/checkout@v7
         with:
